@@ -1536,297 +1536,105 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 font-medium text-slate-300">
-                    {products.map((prod) => {
-                      let imgs: string[] = [];
-                      try {
-                        imgs = typeof prod.images === "string" ? JSON.parse(prod.images) : prod.images;
-                      } catch {
-                        imgs = [prod.images as unknown as string];
-                      }
-                      const totalStock = prod.variants.reduce((sum, v) => sum + v.stock, 0);
+                    {products.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-slate-500">
+                          <Package className="w-10 h-10 mx-auto mb-2 text-slate-600 opacity-60" />
+                          <div className="text-sm font-bold text-slate-400">Nenhum produto cadastrado no catálogo</div>
+                          <p className="text-xs text-slate-500 mt-1">Clique em "Adicionar Produto" acima para cadastrar seu primeiro produto.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      products.map((prod) => {
+                        let imgs: string[] = [];
+                        try {
+                          imgs = typeof prod.images === "string" ? JSON.parse(prod.images) : prod.images;
+                        } catch {
+                          imgs = [prod.images as unknown as string];
+                        }
+                        const totalStock = prod.variants.reduce((sum, v) => sum + v.stock, 0);
 
-                      return (
-                        <tr key={prod.id} className="hover:bg-slate-800/30 transition">
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-12 rounded-lg overflow-hidden bg-slate-800 shrink-0">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={imgs[0]}
-                                  alt={prod.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <div>
-                                <div className="font-bold text-white line-clamp-1">{prod.name}</div>
-                                <div className="text-[11px] text-slate-500 font-mono">
-                                  {prod.slug}
+                        return (
+                          <tr key={prod.id} className="hover:bg-slate-800/30 transition">
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-12 rounded-lg overflow-hidden bg-slate-800 shrink-0">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={imgs[0]}
+                                    alt={prod.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="font-bold text-white line-clamp-1">{prod.name}</div>
+                                  <div className="text-[11px] text-slate-500 font-mono">
+                                    {prod.slug}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </td>
+                            </td>
 
-                          <td className="py-3.5 px-4 font-bold text-slate-400">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-slate-950 border border-slate-800 text-slate-300 font-semibold">
-                              {typeof prod.category === "object" ? prod.category?.name : (prod.category || "Sem Categoria")}
-                            </span>
-                          </td>
-
-                          <td className="py-3.5 px-4">
-                            <div className="text-slate-400 line-through text-[11px]">
-                              R$ {prod.originalPrice.toFixed(2).replace(".", ",")}
-                            </div>
-                            <div className="font-black text-white text-sm">
-                              R$ {prod.price.toFixed(2).replace(".", ",")}
-                            </div>
-                          </td>
-
-                          <td className="py-3.5 px-4">
-                            <div className="font-bold text-white">
-                              {totalStock} unidades totais
-                            </div>
-                            <div className="text-[11px] text-slate-500">
-                              {prod.variants.length} variações cadastradas
-                            </div>
-                          </td>
-
-                          <td className="py-3.5 px-4">
-                            {prod.badge ? (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                                {prod.badge}
+                            <td className="py-3.5 px-4 font-bold text-slate-400">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-slate-950 border border-slate-800 text-slate-300 font-semibold">
+                                {typeof prod.category === "object" ? prod.category?.name : (prod.category || "Sem Categoria")}
                               </span>
-                            ) : (
-                              <span className="text-slate-600">-</span>
-                            )}
-                          </td>
+                            </td>
 
-                          <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => handleOpenEditProduct(prod)}
-                                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
-                                title="Editar"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteProduct(prod.id, prod.name)}
-                                className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition"
-                                title="Excluir"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            <td className="py-3.5 px-4">
+                              <div className="text-slate-400 line-through text-[11px]">
+                                R$ {prod.originalPrice.toFixed(2).replace(".", ",")}
+                              </div>
+                              <div className="font-black text-white text-sm">
+                                R$ {prod.price.toFixed(2).replace(".", ",")}
+                              </div>
+                            </td>
+
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-white">
+                                {totalStock} unidades totais
+                              </div>
+                              <div className="text-[11px] text-slate-500">
+                                {prod.variants.length} variações cadastradas
+                              </div>
+                            </td>
+
+                            <td className="py-3.5 px-4">
+                              {prod.badge ? (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                  {prod.badge}
+                                </span>
+                              ) : (
+                                <span className="text-slate-600">-</span>
+                              )}
+                            </td>
+
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => handleOpenEditProduct(prod)}
+                                  className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
+                                  title="Editar"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteProduct(prod.id, prod.name)}
+                                  className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition"
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
-
-            {/* PRODUCT ADD / EDIT MODAL */}
-            {productModalOpen && (
-              <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-3 sm:p-6 flex justify-center items-start">
-                <div
-                  onClick={() => setProductModalOpen(false)}
-                  className="fixed inset-0 -z-10"
-                />
-
-                <div
-                  role="dialog"
-                  aria-modal="true"
-                  className="relative bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl max-w-2xl w-full shadow-2xl z-10 my-auto flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] overflow-hidden"
-                >
-                  {/* Sticky Header */}
-                  <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur shrink-0">
-                    <div>
-                      <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
-                        {editingProduct ? "Editar Produto" : "Novo Produto no Catálogo"}
-                      </h3>
-                      <p className="text-[11px] text-slate-400">
-                        {editingProduct ? "Atualize as informações, fotos e estoque." : "Cadastre novo produto com fotos e grade de estoque."}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setProductModalOpen(false)}
-                      className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition"
-                      title="Fechar"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  {/* Scrollable Form Body */}
-                  <form id="product-form" onSubmit={handleSaveProduct} className="flex-1 overflow-y-auto p-6 space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 mb-1">
-                        Nome do Produto *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={productForm.name}
-                        onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                        placeholder="Ex: Legging Emana Zero Transparência"
-                        className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-xs font-bold text-slate-400">
-                            Categoria *
-                          </label>
-                          <Link
-                            href="/admin/categorias"
-                            target="_blank"
-                            className="text-[10px] text-rose-400 hover:text-rose-300 font-semibold inline-flex items-center gap-1"
-                          >
-                            <FolderTree className="w-3 h-3" /> Gerenciar
-                          </Link>
-                        </div>
-                        <select
-                          value={productForm.categoryId}
-                          onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white font-bold"
-                        >
-                          <option value="" disabled>Selecione uma categoria...</option>
-                          {categoriesList
-                            .filter((c) => c.isActive || c.id === productForm.categoryId)
-                            .map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name} {!c.isActive ? "(Inativa)" : ""}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-400 mb-1">
-                          Badge Promocional
-                        </label>
-                        <input
-                          type="text"
-                          value={productForm.badge}
-                          onChange={(e) => setProductForm({ ...productForm, badge: e.target.value })}
-                          placeholder="LANÇAMENTO, MAIS VENDIDO..."
-                          className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-400 mb-1">
-                          Preço Original "De" (R$) *
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          required
-                          value={productForm.originalPrice}
-                          onChange={(e) => setProductForm({ ...productForm, originalPrice: Number(e.target.value) })}
-                          className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white font-bold"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-400 mb-1">
-                          Preço Promocional "Por" (R$) *
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          required
-                          value={productForm.price}
-                          onChange={(e) => setProductForm({ ...productForm, price: Number(e.target.value) })}
-                          className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white font-bold"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 mb-1">
-                        Descrição Completa
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={productForm.description}
-                        onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 mb-1">
-                        URLs das Fotos (uma por linha)
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={productForm.imagesText}
-                        onChange={(e) => setProductForm({ ...productForm, imagesText: e.target.value })}
-                        placeholder="https://..."
-                        className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white font-mono"
-                      />
-                    </div>
-
-                    {/* Variants Grid */}
-                    <div className="pt-2">
-                      <label className="block text-xs font-bold text-slate-400 mb-2">
-                        Grade de Estoque por Variação (Tamanho / Cor / Estoque):
-                      </label>
-                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                        {productForm.variants.map((v, idx) => (
-                          <div
-                            key={idx}
-                            className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700 flex items-center gap-3 text-xs"
-                          >
-                            <span className="font-black text-rose-400 w-8">{v.size}</span>
-                            <span className="flex-1 font-bold">{v.color}</span>
-                            <div className="flex items-center gap-1">
-                              <span className="text-slate-400 text-[11px]">Estoque:</span>
-                              <input
-                                type="number"
-                                min={0}
-                                value={v.stock}
-                                onChange={(e) => {
-                                  const updated = [...productForm.variants];
-                                  updated[idx].stock = Number(e.target.value);
-                                  setProductForm({ ...productForm, variants: updated });
-                                }}
-                                className="w-16 px-2 py-1 rounded bg-slate-900 border border-slate-600 text-white font-bold text-center"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </form>
-
-                  {/* Sticky Footer */}
-                  <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/95 flex justify-end items-center gap-3 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setProductModalOpen(false)}
-                      className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      form="product-form"
-                      className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-rose-600 text-white hover:bg-rose-500 shadow-md transition"
-                    >
-                      Salvar Produto
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
           </div>
         )}
@@ -1954,187 +1762,392 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* ORDER DETAILS MODAL */}
-            {selectedOrder && (
-              <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-3 sm:p-6 flex justify-center items-start">
-                <div
-                  onClick={() => setSelectedOrder(null)}
-                  className="fixed inset-0 -z-10"
-                />
-
-                <div
-                  role="dialog"
-                  aria-modal="true"
-                  className="relative bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl max-w-2xl w-full shadow-2xl z-10 my-auto flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] overflow-hidden"
-                >
-                  <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur shrink-0">
-                    <div>
-                      <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
-                        Pedido {selectedOrder.id}
-                      </h3>
-                      <p className="text-xs text-slate-400">
-                        {new Date(selectedOrder.createdAt).toLocaleDateString("pt-BR", {
-                          day: "2-digit",
-                          month: "long",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOrder(null)}
-                      className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition"
-                      title="Fechar"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-                  {/* Customer and Delivery Info */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-800 space-y-1">
-                      <div className="font-black text-white uppercase text-[11px] mb-2">
-                        Dados do Comprador
-                      </div>
-                      <div className="font-bold text-white">{selectedOrder.customerName}</div>
-                      <div className="text-slate-400">{selectedOrder.customerEmail}</div>
-                      <div className="text-slate-400">CPF: {selectedOrder.customerCpf}</div>
-                      <div className="text-slate-400">Tel: {selectedOrder.customerPhone}</div>
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-800 space-y-1">
-                      <div className="font-black text-white uppercase text-[11px] mb-2">
-                        Endereço de Entrega
-                      </div>
-                      <div className="text-slate-300">
-                        {selectedOrder.shippingStreet}, {selectedOrder.shippingNumber}
-                      </div>
-                      <div className="text-slate-400">
-                        {selectedOrder.shippingNeighborhood} - {selectedOrder.shippingCity}/
-                        {selectedOrder.shippingState}
-                      </div>
-                      <div className="text-slate-400">CEP: {selectedOrder.shippingCep}</div>
-                      <div className="text-cyan-400 font-bold mt-1">
-                        Envio: {selectedOrder.shippingMethod}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Order Items */}
-                  <div>
-                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">
-                      Itens Comprados
-                    </h4>
-                    <div className="divide-y divide-slate-800 bg-slate-800/40 rounded-2xl border border-slate-800 overflow-hidden">
-                      {selectedOrder.items.map((item) => (
-                        <div key={item.id} className="p-3 flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-12 rounded-lg overflow-hidden bg-slate-800 shrink-0">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={item.imageUrl}
-                                alt={item.productName}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <div>
-                              <div className="font-bold text-white">{item.productName}</div>
-                              <div className="text-slate-400 text-[11px]">
-                                Tam: {item.size} | Cor: {item.color} | Qtd: {item.quantity}
-                              </div>
-                            </div>
-                          </div>
-                          <span className="font-black text-white">
-                            R$ {(item.price * item.quantity).toFixed(2).replace(".", ",")}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Tracking Code Input */}
-                  <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-800 space-y-2">
-                    <label className="block text-xs font-bold text-slate-300">
-                      Código de Rastreamento dos Correios / Transportadora
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={trackingInput}
-                        onChange={(e) => setTrackingInput(e.target.value.toUpperCase())}
-                        placeholder="Ex: BR123456789SP"
-                        className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 font-mono text-xs text-white"
-                      />
-                      <button
-                        onClick={() =>
-                          handleUpdateOrderStatus(
-                            selectedOrder.id,
-                            selectedOrder.paymentStatus,
-                            trackingInput
-                          )
-                        }
-                        className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white"
-                      >
-                        Salvar Rastreio
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Status Actions */}
-                  <div className="pt-2 border-t border-slate-800 space-y-3">
-                    <div className="text-xs font-bold text-slate-400">Alterar Status do Pedido:</div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        onClick={() => handleUpdateOrderStatus(selectedOrder.id, "APPROVED")}
-                        className="py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white"
-                      >
-                        Aprovar Pagamento
-                      </button>
-                      <button
-                        onClick={() => handleUpdateOrderStatus(selectedOrder.id, "SHIPPED")}
-                        className="py-2.5 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white"
-                      >
-                        Marcar como Enviado
-                      </button>
-                      <button
-                        onClick={() => handleUpdateOrderStatus(selectedOrder.id, "CANCELLED")}
-                        className="py-2.5 rounded-xl text-xs font-bold bg-rose-600/80 hover:bg-rose-600 text-white"
-                      >
-                        Cancelar Pedido
-                      </button>
-                    </div>
-
-                    {/* WhatsApp message button */}
-                    <a
-                      href={`https://wa.me/${selectedOrder.customerPhone.replace(
-                        /\D/g,
-                        ""
-                      )}?text=${encodeURIComponent(
-                        `Olá ${selectedOrder.customerName}, tudo bem? Aqui é da equipe JVMODAS sobre o seu pedido ${selectedOrder.id}!`
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-3 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/20 flex items-center justify-center gap-2 transition"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      <span>Falar com o Cliente no WhatsApp</span>
-                    </a>
-                  </div>
-
-                  {/* Close scrollable body */}
-                  </div>
-                </div>
-              </div>
-            )}
-
           </div>
         )}
 
       </main>
+
+      {/* ============================================================== */}
+      {/* ROOT LEVEL MODALS (Outside animated tab containers) */}
+      {/* ============================================================== */}
+
+      {/* PRODUCT ADD / EDIT MODAL */}
+      {productModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-3 sm:p-6 flex justify-center items-start">
+          <div
+            onClick={() => setProductModalOpen(false)}
+            className="fixed inset-0 -z-10"
+          />
+
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl max-w-2xl w-full shadow-2xl z-10 my-auto flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] overflow-hidden"
+          >
+            {/* Sticky Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur shrink-0">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
+                  {editingProduct ? "Editar Produto" : "Novo Produto no Catálogo"}
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  {editingProduct ? "Atualize as informações, fotos e estoque." : "Cadastre novo produto com fotos e grade de estoque."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setProductModalOpen(false)}
+                className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                title="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form id="product-form" onSubmit={handleSaveProduct} className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">
+                  Nome do Produto *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={productForm.name}
+                  onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                  placeholder="Ex: Legging Emana Zero Transparência"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-400">
+                      Categoria *
+                    </label>
+                    <Link
+                      href="/admin/categorias"
+                      target="_blank"
+                      className="text-[10px] text-rose-400 hover:text-rose-300 font-semibold inline-flex items-center gap-1"
+                    >
+                      <FolderTree className="w-3 h-3" /> Gerenciar
+                    </Link>
+                  </div>
+                  <select
+                    value={productForm.categoryId}
+                    onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white font-bold"
+                  >
+                    <option value="" disabled>Selecione uma categoria...</option>
+                    {categoriesList
+                      .filter((c) => c.isActive || c.id === productForm.categoryId)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} {!c.isActive ? "(Inativa)" : ""}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1">
+                    Badge Promocional
+                  </label>
+                  <input
+                    type="text"
+                    value={productForm.badge}
+                    onChange={(e) => setProductForm({ ...productForm, badge: e.target.value })}
+                    placeholder="LANÇAMENTO, MAIS VENDIDO..."
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1">
+                    Preço Original "De" (R$) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    required
+                    value={productForm.originalPrice}
+                    onChange={(e) => setProductForm({ ...productForm, originalPrice: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1">
+                    Preço Promocional "Por" (R$) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    required
+                    value={productForm.price}
+                    onChange={(e) => setProductForm({ ...productForm, price: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white font-bold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">
+                  Descrição Completa
+                </label>
+                <textarea
+                  rows={3}
+                  value={productForm.description}
+                  onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">
+                  URLs das Fotos (uma por linha)
+                </label>
+                <textarea
+                  rows={3}
+                  value={productForm.imagesText}
+                  onChange={(e) => setProductForm({ ...productForm, imagesText: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white font-mono"
+                />
+              </div>
+
+              {/* Variants Grid */}
+              <div className="pt-2">
+                <label className="block text-xs font-bold text-slate-400 mb-2">
+                  Grade de Estoque por Variação (Tamanho / Cor / Estoque):
+                </label>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {productForm.variants.map((v, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700 flex items-center gap-3 text-xs"
+                    >
+                      <span className="font-black text-rose-400 w-8">{v.size}</span>
+                      <span className="flex-1 font-bold">{v.color}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-slate-400 text-[11px]">Estoque:</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={v.stock}
+                          onChange={(e) => {
+                            const updated = [...productForm.variants];
+                            updated[idx].stock = Number(e.target.value);
+                            setProductForm({ ...productForm, variants: updated });
+                          }}
+                          className="w-16 px-2 py-1 rounded bg-slate-900 border border-slate-600 text-white font-bold text-center"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </form>
+
+            {/* Sticky Footer */}
+            <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/95 flex justify-end items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setProductModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                form="product-form"
+                className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-rose-600 text-white hover:bg-rose-500 shadow-md transition"
+              >
+                Salvar Produto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ORDER DETAILS MODAL */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-3 sm:p-6 flex justify-center items-start">
+          <div
+            onClick={() => setSelectedOrder(null)}
+            className="fixed inset-0 -z-10"
+          />
+
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl max-w-2xl w-full shadow-2xl z-10 my-auto flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur shrink-0">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
+                  Pedido {selectedOrder.id}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {new Date(selectedOrder.createdAt).toLocaleDateString("pt-BR", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedOrder(null)}
+                className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                title="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+            {/* Customer and Delivery Info */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-800 space-y-1">
+                <div className="font-black text-white uppercase text-[11px] mb-2">
+                  Dados do Comprador
+                </div>
+                <div className="font-bold text-white">{selectedOrder.customerName}</div>
+                <div className="text-slate-400">{selectedOrder.customerEmail}</div>
+                <div className="text-slate-400">CPF: {selectedOrder.customerCpf}</div>
+                <div className="text-slate-400">Tel: {selectedOrder.customerPhone}</div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-800 space-y-1">
+                <div className="font-black text-white uppercase text-[11px] mb-2">
+                  Endereço de Entrega
+                </div>
+                <div className="text-slate-300">
+                  {selectedOrder.shippingStreet}, {selectedOrder.shippingNumber}
+                </div>
+                <div className="text-slate-400">
+                  {selectedOrder.shippingNeighborhood} - {selectedOrder.shippingCity}/
+                  {selectedOrder.shippingState}
+                </div>
+                <div className="text-slate-400">CEP: {selectedOrder.shippingCep}</div>
+                <div className="text-cyan-400 font-bold mt-1">
+                  Envio: {selectedOrder.shippingMethod}
+                </div>
+              </div>
+            </div>
+
+            {/* Order Items */}
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">
+                Itens Comprados
+              </h4>
+              <div className="divide-y divide-slate-800 bg-slate-800/40 rounded-2xl border border-slate-800 overflow-hidden">
+                {selectedOrder.items.map((item) => (
+                  <div key={item.id} className="p-3 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-12 rounded-lg overflow-hidden bg-slate-800 shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={item.imageUrl}
+                          alt={item.productName}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <div className="font-bold text-white">{item.productName}</div>
+                        <div className="text-slate-400 text-[11px]">
+                          Tam: {item.size} | Cor: {item.color} | Qtd: {item.quantity}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="font-black text-white">
+                      R$ {(item.price * item.quantity).toFixed(2).replace(".", ",")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tracking Code Input */}
+            <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-800 space-y-2">
+              <label className="block text-xs font-bold text-slate-300">
+                Código de Rastreamento dos Correios / Transportadora
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={trackingInput}
+                  onChange={(e) => setTrackingInput(e.target.value.toUpperCase())}
+                  placeholder="Ex: BR123456789SP"
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 font-mono text-xs text-white"
+                />
+                <button
+                  onClick={() =>
+                    handleUpdateOrderStatus(
+                      selectedOrder.id,
+                      selectedOrder.paymentStatus,
+                      trackingInput
+                    )
+                  }
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white"
+                >
+                  Salvar Rastreio
+                </button>
+              </div>
+            </div>
+
+            {/* Status Actions */}
+            <div className="pt-2 border-t border-slate-800 space-y-3">
+              <div className="text-xs font-bold text-slate-400">Alterar Status do Pedido:</div>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "APPROVED")}
+                  className="py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white"
+                >
+                  Aprovar Pagamento
+                </button>
+                <button
+                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "SHIPPED")}
+                  className="py-2.5 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white"
+                >
+                  Marcar como Enviado
+                </button>
+                <button
+                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "CANCELLED")}
+                  className="py-2.5 rounded-xl text-xs font-bold bg-rose-600/80 hover:bg-rose-600 text-white"
+                >
+                  Cancelar Pedido
+                </button>
+              </div>
+
+              {/* WhatsApp message button */}
+              <a
+                href={`https://wa.me/${selectedOrder.customerPhone.replace(
+                  /\D/g,
+                  ""
+                )}?text=${encodeURIComponent(
+                  `Olá ${selectedOrder.customerName}, tudo bem? Aqui é da equipe JVMODAS sobre o seu pedido ${selectedOrder.id}!`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/20 flex items-center justify-center gap-2 transition"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Falar com o Cliente no WhatsApp</span>
+              </a>
+            </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
