@@ -368,24 +368,32 @@ export default function AdminPage() {
     };
 
     try {
+      let res;
       if (editingProduct) {
-        await fetch(`/api/products/${editingProduct.id}`, {
+        res = await fetch(`/api/products/${editingProduct.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
       } else {
-        await fetch("/api/products", {
+        res = await fetch("/api/products", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
       }
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.error || "Erro ao salvar produto. Verifique os campos informados.");
+        return;
+      }
+
       setProductModalOpen(false);
       fetchProducts();
     } catch (e) {
       console.error(e);
-      alert("Erro ao salvar produto");
+      alert("Erro de conexão ao salvar produto");
     }
   };
 

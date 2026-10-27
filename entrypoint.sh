@@ -28,8 +28,8 @@ else
   sqlite3 /app/data/jvmodas.db "INSERT OR IGNORE INTO categories (id, name, slug, description, isActive) VALUES ('cat_macacoes', 'Macacões', 'macacoes', 'Macacões modeladores de peça única.', 1);" 2>/dev/null || true
   sqlite3 /app/data/jvmodas.db "INSERT OR IGNORE INTO categories (id, name, slug, description, isActive) VALUES ('cat_acessorios', 'Acessórios', 'acessorios', 'Acessórios e complementos esportivos.', 1);" 2>/dev/null || true
 
-  # Vincula categoryId em produtos antigos onde categoryId estiver nulo
-  sqlite3 /app/data/jvmodas.db "UPDATE products SET categoryId = (SELECT id FROM categories WHERE LOWER(categories.name) = LOWER(products.category)) WHERE categoryId IS NULL AND category IS NOT NULL;" 2>/dev/null || true
+  # Garante remoção de coluna legada category se existir na tabela products
+  sqlite3 /app/data/jvmodas.db "ALTER TABLE products DROP COLUMN category;" 2>/dev/null || true
 
   # Garante que order_items permita productId nulo e desvinculação segura ao excluir produtos
   sqlite3 /app/data/jvmodas.db "
