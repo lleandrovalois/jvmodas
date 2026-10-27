@@ -9,9 +9,15 @@ export async function isAdminAuthenticated(): Promise<boolean> {
   return session?.value === ADMIN_TOKEN;
 }
 
-export async function createAdminSession(): Promise<void> {
+export async function createAdminSession(req?: Request): Promise<void> {
   const cookieStore = await cookies();
-  const isHttps = (process.env.NEXT_PUBLIC_APP_URL || "").startsWith("https://") || process.env.COOKIE_SECURE === "true";
+  let isHttps = false;
+  if (req) {
+    const proto = req.headers.get("x-forwarded-proto") || (req.url.startsWith("https://") ? "https" : "http");
+    isHttps = proto === "https";
+  } else {
+    isHttps = process.env.COOKIE_SECURE === "true" || (process.env.NEXT_PUBLIC_APP_URL || "").startsWith("https://");
+  }
   cookieStore.set(ADMIN_COOKIE_NAME, ADMIN_TOKEN, {
     httpOnly: true,
     secure: isHttps,

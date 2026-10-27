@@ -22,6 +22,7 @@ import {
   Sparkles,
   Wallet,
 } from "lucide-react";
+import { MercadoPagoModal } from "@/components/MercadoPagoModal";
 
 declare global {
   interface Window {
@@ -70,13 +71,14 @@ export default function CheckoutPage() {
   const [submitError, setSubmitError] = useState("");
   const [sdkReady, setSdkReady] = useState(false);
 
-  // Modal payment fallback state in case user minimizes or closes the modal
+  // Modal payment state
   const [createdOrder, setCreatedOrder] = useState<{
     orderId: string;
     preferenceId: string;
     initPoint: string;
     publicKey: string;
   } | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const threshold = cms.freeShippingThreshold || 199.0;
   const isFreeShipping = subtotal >= threshold;
@@ -236,8 +238,8 @@ export default function CheckoutPage() {
       // Clear local cart
       clearCart();
 
-      // Launch Modal
-      openMercadoPagoModal(data.preferenceId, data.publicKey, data.initPoint);
+      // Launch Modal directly without redirecting to a new tab
+      setIsModalOpen(true);
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : "Ocorreu um erro ao finalizar o pedido.");
     } finally {
@@ -312,22 +314,16 @@ export default function CheckoutPage() {
                 Pedido Criado: #{createdOrder.orderId}
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-lg mx-auto">
-                A janela oficial do Mercado Pago foi aberta. Conclua seu pagamento por PIX, Cartão de Crédito ou Saldo. Caso a janela não tenha aparecido, clique no botão abaixo:
+                Conclua seu pagamento com segurança via PIX ou Cartão no modal oficial do Mercado Pago.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    openMercadoPagoModal(
-                      createdOrder.preferenceId,
-                      createdOrder.publicKey,
-                      createdOrder.initPoint
-                    )
-                  }
+                  onClick={() => setIsModalOpen(true)}
                   className="px-6 py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider bg-sky-500 hover:bg-sky-400 text-white shadow-md flex items-center gap-2 transition"
                 >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>Abrir Mercado Pago Novamente</span>
+                  <CreditCard className="w-4 h-4" />
+                  <span>Abrir Pagamento Mercado Pago</span>
                 </button>
                 <Link
                   href={`/pedido/sucesso?external_reference=${createdOrder.orderId}&status=pending`}
@@ -855,6 +851,20 @@ export default function CheckoutPage() {
           </form>
         </main>
       </div>
+
+      {/* MERCADO PAGO MODAL CHECKOUT */}
+      {createdOrder && (
+        <MercadoPagoModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          orderId={createdOrder.orderId}
+          preferenceId={createdOrder.preferenceId}
+          initPoint={createdOrder.initPoint}
+          publicKey={createdOrder.publicKey}
+          total={total}
+          customer={customer}
+        />
+      )}
     </>
   );
 }

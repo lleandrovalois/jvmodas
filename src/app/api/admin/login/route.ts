@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       );
     }
 
-    await createAdminSession();
+    await createAdminSession(req);
 
     return NextResponse.json({
       success: true,

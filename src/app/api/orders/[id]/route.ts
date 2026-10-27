@@ -83,32 +83,80 @@ export async function PATCH(
     const isAuth = await isAdminAuthenticated();
     if (!isAuth) {
       return NextResponse.json(
-        { error: "Acesso não autorizado" },
+        { error: "Acesso não autorizado. Sua sessão administrativa pode ter expirado. Faça login novamente." },
         { status: 401 }
       );
     }
 
     const { id } = await params;
+    const orderId = decodeURIComponent(id);
     const body = await req.json();
     const { paymentStatus, orderStatus, trackingCode } = body;
 
-    const updated = await prisma.order.update({
-      where: { id },
-      data: {
-        ...(paymentStatus ? { paymentStatus } : {}),
-        ...(orderStatus ? { orderStatus } : {}),
-        ...(trackingCode !== undefined ? { trackingCode } : {}),
-      },
-      include: {
-        items: true,
-      },
+    const existing = await prisma.order.findUnique({
+      where: { id: orderId },
     });
 
-    return NextResponse.json(updated);
-  } catch (error) {
+    if (!existing) {
+      return NextResponse.json(
+        { error: `Pedido #${orderId} não encontrado no banco de dados.` },
+        { status: 404 }
+      );
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: Record<string, any> = {};
+    if (paymentStatus) updateData.paymentStatus = paymentStatus;
+    if (orderStatus) {
+      updateData.orderStatus = orderStatus;
+      // Keep paymentStatus logically synchronized with order delivery status
+      if (!paymentStatus) {
+        if (orderStatus === "PAGO" || orderStatus === "SEPARANDO" || orderStatus === "ENVIADO" || orderStatus === "ENTREGUE") {
+          updateData.paymentStatus = "APPROVED";
+        } else if (orderStatus === "CANCELADO") {
+          updateData.paymentStatus = "CANCELLED";
+        } else if (orderStatus === "REALIZADO") {
+          updateData.paymentStatus = "PENDING";
+        }
+      }
+    }
+    if (trackingCode !== undefined) {
+      updateData.trackingCode = trackingCode ? trackingCode.trim() : null;
+    }
+
+    try {
+      const updated = await prisma.order.update({
+        where: { id: orderId },
+        data: updateData,
+        include: {
+          items: true,
+        },
+      });
+
+      return NextResponse.json(updated);
+    } catch (dbErr: any) {
+      // Auto-migrate if column orderStatus is missing in older SQLite databases
+      if (dbErr?.message?.includes("orderStatus") || dbErr?.code === "P2022") {
+        try {
+          await prisma.$executeRawUnsafe(
+            `ALTER TABLE orders ADD COLUMN orderStatus TEXT DEFAULT 'REALIZADO';`
+          );
+          const retryUpdated = await prisma.order.update({
+            where: { id: orderId },
+            data: updateData,
+            include: { items: true },
+          });
+          return NextResponse.json(retryUpdated);
+        } catch (migrationErr) {
+          console.error("Auto-migration fallback failed:", migrationErr);
+        }
+      }
+      throw dbErr;
+    }
+  } catch (error: any) {
     console.error("Error updating order:", error);
     return NextResponse.json(
-      { error: "Erro ao atualizar status do pedido" },
+      { error: error?.message || "Erro ao atualizar status do pedido" },
       { status: 500 }
     );
   }

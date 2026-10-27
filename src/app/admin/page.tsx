@@ -42,6 +42,19 @@ import {
 } from "lucide-react";
 import { THEME_PRESETS, FACTORY_DEFAULT_PRESET, ThemePreset } from "@/lib/theme-presets";
 
+// Helper to normalize and detect active order status
+const getNormalizedStatus = (ord: Order): string => {
+  const oStatus = (ord.orderStatus || "").toUpperCase();
+  const pStatus = (ord.paymentStatus || "").toUpperCase();
+
+  if (oStatus === "ENTREGUE" || pStatus === "DELIVERED") return "ENTREGUE";
+  if (oStatus === "ENVIADO" || pStatus === "SHIPPED") return "ENVIADO";
+  if (oStatus === "SEPARANDO") return "SEPARANDO";
+  if (oStatus === "PAGO" || (pStatus === "APPROVED" && (!oStatus || oStatus === "REALIZADO"))) return "PAGO";
+  if (oStatus === "CANCELADO" || pStatus === "CANCELLED") return "CANCELADO";
+  return "REALIZADO";
+};
+
 export default function AdminPage() {
   const { cms, refreshCms } = useCms();
 
@@ -89,7 +102,10 @@ export default function AdminPage() {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [orderStatusFilter, setOrderStatusFilter] = useState("ALL");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [statusSelectValue, setStatusSelectValue] = useState<string>("REALIZADO");
   const [trackingInput, setTrackingInput] = useState("");
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [statusFeedback, setStatusFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Check auth on load
   const checkAuth = async () => {
@@ -414,36 +430,122 @@ export default function AdminPage() {
     }
   };
 
-  // Order status update
-  const handleUpdateOrderStatus = async (orderId: string, status: string, tracking?: string, customOrderStatus?: string) => {
+  // Order status update with robust error handling and feedback
+  const handleUpdateOrderStatus = async (
+    orderId: string,
+    options: {
+      paymentStatus?: string;
+      orderStatus?: string;
+      trackingCode?: string;
+    }
+  ) => {
+    setUpdatingOrderId(orderId);
+    setStatusFeedback(null);
     try {
-      let orderStatus = customOrderStatus || "REALIZADO";
-      if (!customOrderStatus) {
-        if (status === "APPROVED") orderStatus = "PAGO";
-        else if (status === "SEPARATING") orderStatus = "SEPARANDO";
-        else if (status === "SHIPPED") orderStatus = "ENVIADO";
-        else if (status === "DELIVERED") orderStatus = "ENTREGUE";
-        else if (status === "CANCELLED") orderStatus = "CANCELADO";
-      }
+      // Build precise payload
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const payload: Record<string, any> = {};
+      if (options.paymentStatus) payload.paymentStatus = options.paymentStatus;
+      if (options.orderStatus) payload.orderStatus = options.orderStatus;
+      if (options.trackingCode !== undefined) payload.trackingCode = options.trackingCode;
 
-      await fetch(`/api/orders/${orderId}`, {
+      const res = await fetch(`/api/orders/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentStatus: status, orderStatus, trackingCode: tracking }),
+        body: JSON.stringify(payload),
       });
-      fetchOrders();
-      if (selectedOrder && selectedOrder.id === orderId) {
-        setSelectedOrder((prev) =>
-          prev ? { ...prev, paymentStatus: status, orderStatus, trackingCode: tracking || prev.trackingCode } : null
-        );
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          setIsAuthenticated(false);
+          alert("Sua sessão administrativa expirou. Por favor, faça login novamente.");
+          return;
+        }
+        throw new Error(data.error || "Erro ao atualizar status do pedido no servidor");
       }
-    } catch (e) {
+
+      // Update state locally with data returned from server
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, ...data } : o))
+      );
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder((prev) => (prev ? { ...prev, ...data } : null));
+        if (data.orderStatus) {
+          setStatusSelectValue(data.orderStatus);
+        } else if (data.paymentStatus) {
+          setStatusSelectValue(
+            data.paymentStatus === "APPROVED"
+              ? "PAGO"
+              : data.paymentStatus === "CANCELLED"
+              ? "CANCELADO"
+              : "REALIZADO"
+          );
+        }
+        if (data.trackingCode !== undefined) {
+          setTrackingInput(data.trackingCode || "");
+        }
+      }
+
+      setStatusFeedback({
+        type: "success",
+        message:
+          options.trackingCode !== undefined && !options.orderStatus && !options.paymentStatus
+            ? "Código de rastreamento salvo com sucesso!"
+            : `Status do pedido atualizado com sucesso para: ${data.orderStatus || data.paymentStatus}!`,
+      });
+
+      setTimeout(() => {
+        setStatusFeedback(null);
+      }, 4000);
+
+      fetchOrders();
+    } catch (e: any) {
       console.error(e);
+      setStatusFeedback({
+        type: "error",
+        message: e?.message || "Erro de conexão ao tentar atualizar status.",
+      });
+      alert(e?.message || "Falha ao atualizar status do pedido.");
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
+  // Dedicated helper to apply status from dropdown or quick-action buttons
+  const handleApplyStatus = async (newStatus: string) => {
+    if (!selectedOrder) return;
+    let paymentStatus = "APPROVED";
+    if (newStatus === "CANCELADO") {
+      paymentStatus = "CANCELLED";
+    } else if (newStatus === "REALIZADO") {
+      paymentStatus = "PENDING";
+    }
+
+    setStatusSelectValue(newStatus);
+
+    await handleUpdateOrderStatus(selectedOrder.id, {
+      orderStatus: newStatus,
+      paymentStatus,
+      trackingCode:
+        newStatus === "ENVIADO"
+          ? trackingInput || selectedOrder.trackingCode || undefined
+          : undefined,
+    });
+  };
+
   // Metrics calculation
-  const approvedOrders = orders.filter((o) => o.paymentStatus === "APPROVED" || o.paymentStatus === "SHIPPED");
+  const approvedOrders = orders.filter(
+    (o) =>
+      o.paymentStatus === "APPROVED" ||
+      o.paymentStatus === "SHIPPED" ||
+      o.paymentStatus === "DELIVERED" ||
+      o.orderStatus === "PAGO" ||
+      o.orderStatus === "SEPARANDO" ||
+      o.orderStatus === "ENVIADO" ||
+      o.orderStatus === "ENTREGUE"
+  );
   const totalRevenue = approvedOrders.reduce((sum, o) => sum + o.total, 0);
   const averageTicket = approvedOrders.length > 0 ? totalRevenue / approvedOrders.length : 0;
   const lowStockVariants = products
@@ -453,7 +555,25 @@ export default function AdminPage() {
   // Filtered orders
   const filteredOrders = orders.filter((o) => {
     if (orderStatusFilter === "ALL") return true;
-    return o.paymentStatus === orderStatusFilter;
+    if (orderStatusFilter === "PENDING") {
+      return o.paymentStatus === "PENDING" && (!o.orderStatus || o.orderStatus === "REALIZADO");
+    }
+    if (orderStatusFilter === "PAGO") {
+      return o.orderStatus === "PAGO" || (o.paymentStatus === "APPROVED" && (!o.orderStatus || o.orderStatus === "REALIZADO"));
+    }
+    if (orderStatusFilter === "SEPARANDO") {
+      return o.orderStatus === "SEPARANDO";
+    }
+    if (orderStatusFilter === "ENVIADO") {
+      return o.orderStatus === "ENVIADO" || o.paymentStatus === "SHIPPED";
+    }
+    if (orderStatusFilter === "ENTREGUE") {
+      return o.orderStatus === "ENTREGUE" || o.paymentStatus === "DELIVERED";
+    }
+    if (orderStatusFilter === "CANCELLED") {
+      return o.orderStatus === "CANCELADO" || o.paymentStatus === "CANCELLED";
+    }
+    return o.paymentStatus === orderStatusFilter || o.orderStatus === orderStatusFilter;
   });
 
   // 1. RENDER LOGIN SCREEN IF NOT AUTHENTICATED
@@ -1680,10 +1800,12 @@ export default function AdminPage() {
                   onChange={(e) => setOrderStatusFilter(e.target.value)}
                   className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-white focus:outline-none"
                 >
-                  <option value="ALL">Todos os Status</option>
-                  <option value="PENDING">Pendentes</option>
-                  <option value="APPROVED">Aprovados</option>
-                  <option value="SHIPPED">Enviados</option>
+                  <option value="ALL">Todos os Pedidos</option>
+                  <option value="PENDING">Pendentes de Pagamento</option>
+                  <option value="PAGO">Pagos / Aprovados</option>
+                  <option value="SEPARANDO">Em Separação</option>
+                  <option value="ENVIADO">Enviados</option>
+                  <option value="ENTREGUE">Entregues</option>
                   <option value="CANCELLED">Cancelados</option>
                 </select>
               </div>
@@ -1730,25 +1852,57 @@ export default function AdminPage() {
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                              ord.paymentStatus === "APPROVED"
-                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                                : ord.paymentStatus === "SHIPPED"
-                                ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
-                                : ord.paymentStatus === "CANCELLED"
-                                ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                                : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                            }`}
-                          >
-                            {ord.paymentStatus === "APPROVED"
-                              ? "Aprovado"
-                              : ord.paymentStatus === "SHIPPED"
-                              ? "Enviado"
-                              : ord.paymentStatus === "CANCELLED"
-                              ? "Cancelado"
-                              : "Pendente"}
-                          </span>
+                          {(() => {
+                            const oStatus = (ord.orderStatus || "").toUpperCase();
+                            const pStatus = (ord.paymentStatus || "").toUpperCase();
+
+                            if (oStatus === "ENTREGUE" || pStatus === "DELIVERED") {
+                              return (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center gap-1 w-fit">
+                                  <CheckCircle2 className="w-3 h-3 text-teal-400" />
+                                  <span>Entregue</span>
+                                </span>
+                              );
+                            }
+                            if (oStatus === "ENVIADO" || pStatus === "SHIPPED") {
+                              return (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center gap-1 w-fit">
+                                  <Truck className="w-3 h-3 text-cyan-400" />
+                                  <span>Enviado</span>
+                                </span>
+                              );
+                            }
+                            if (oStatus === "SEPARANDO") {
+                              return (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1 w-fit">
+                                  <Package className="w-3 h-3 text-indigo-400" />
+                                  <span>Em Separação</span>
+                                </span>
+                              );
+                            }
+                            if (oStatus === "PAGO" || pStatus === "APPROVED") {
+                              return (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 w-fit">
+                                  <Check className="w-3 h-3 text-emerald-400 stroke-[3]" />
+                                  <span>Pago</span>
+                                </span>
+                              );
+                            }
+                            if (oStatus === "CANCELADO" || pStatus === "CANCELLED") {
+                              return (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1 w-fit">
+                                  <XCircle className="w-3 h-3 text-rose-400" />
+                                  <span>Cancelado</span>
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1 w-fit">
+                                <Clock className="w-3 h-3 text-amber-400" />
+                                <span>Pendente</span>
+                              </span>
+                            );
+                          })()}
                         </td>
 
                         <td className="py-3.5 px-4">
@@ -1763,11 +1917,14 @@ export default function AdminPage() {
 
                         <td className="py-3.5 px-4 text-right">
                           <button
+                            type="button"
                             onClick={() => {
                               setSelectedOrder(ord);
+                              setStatusSelectValue(getNormalizedStatus(ord));
                               setTrackingInput(ord.trackingCode || "");
+                              setStatusFeedback(null);
                             }}
-                            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition"
+                            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition cursor-pointer"
                           >
                             Gerenciar
                           </button>
@@ -1790,16 +1947,16 @@ export default function AdminPage() {
 
       {/* PRODUCT ADD / EDIT MODAL */}
       {productModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-3 sm:p-6 flex justify-center items-start">
+        <div className="fixed inset-0 z-50 overflow-y-auto p-3 sm:p-6 flex justify-center items-start">
           <div
             onClick={() => setProductModalOpen(false)}
-            className="fixed inset-0 -z-10"
+            className="fixed inset-0 bg-black/85 backdrop-blur-sm cursor-pointer z-0"
           />
 
           <div
             role="dialog"
             aria-modal="true"
-            className="relative bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl max-w-2xl w-full shadow-2xl z-10 my-auto flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] overflow-hidden"
+            className="relative bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl max-w-2xl w-full shadow-2xl z-10 my-auto flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] overflow-hidden pointer-events-auto"
           >
             {/* Sticky Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur shrink-0">
@@ -1992,23 +2149,82 @@ export default function AdminPage() {
 
       {/* ORDER DETAILS MODAL */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-3 sm:p-6 flex justify-center items-start">
+        <div className="fixed inset-0 z-50 overflow-y-auto p-3 sm:p-6 flex justify-center items-start">
           <div
-            onClick={() => setSelectedOrder(null)}
-            className="fixed inset-0 -z-10"
+            onClick={() => {
+              setSelectedOrder(null);
+              setStatusFeedback(null);
+            }}
+            className="fixed inset-0 bg-black/85 backdrop-blur-sm cursor-pointer z-0"
           />
 
           <div
             role="dialog"
             aria-modal="true"
-            className="relative bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl max-w-2xl w-full shadow-2xl z-10 my-auto flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] overflow-hidden"
+            className="relative bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl max-w-2xl w-full shadow-2xl z-10 my-auto flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] overflow-hidden pointer-events-auto"
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur shrink-0 gap-3">
               <div>
-                <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
-                  Pedido {selectedOrder.id}
-                </h3>
-                <p className="text-xs text-slate-400">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
+                    Pedido {selectedOrder.id}
+                  </h3>
+
+                  {/* Current Status Badge in Header */}
+                  {(() => {
+                    const oStatus = (selectedOrder.orderStatus || "").toUpperCase();
+                    const pStatus = (selectedOrder.paymentStatus || "").toUpperCase();
+
+                    if (oStatus === "ENTREGUE" || pStatus === "DELIVERED") {
+                      return (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-teal-400" />
+                          <span>Entregue</span>
+                        </span>
+                      );
+                    }
+                    if (oStatus === "ENVIADO" || pStatus === "SHIPPED") {
+                      return (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+                          <Truck className="w-3 h-3 text-cyan-400" />
+                          <span>Enviado</span>
+                        </span>
+                      );
+                    }
+                    if (oStatus === "SEPARANDO") {
+                      return (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+                          <Package className="w-3 h-3 text-indigo-400" />
+                          <span>Em Separação</span>
+                        </span>
+                      );
+                    }
+                    if (oStatus === "PAGO" || pStatus === "APPROVED") {
+                      return (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                          <Check className="w-3 h-3 text-emerald-400 stroke-[3]" />
+                          <span>Pagamento Aprovado</span>
+                        </span>
+                      );
+                    }
+                    if (oStatus === "CANCELADO" || pStatus === "CANCELLED") {
+                      return (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                          <XCircle className="w-3 h-3 text-rose-400" />
+                          <span>Cancelado</span>
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-amber-400" />
+                        <span>Aguardando Pagamento</span>
+                      </span>
+                    );
+                  })()}
+                </div>
+
+                <p className="text-xs text-slate-400 mt-0.5">
                   {new Date(selectedOrder.createdAt).toLocaleDateString("pt-BR", {
                     day: "2-digit",
                     month: "long",
@@ -2018,10 +2234,14 @@ export default function AdminPage() {
                   })}
                 </p>
               </div>
+
               <button
                 type="button"
-                onClick={() => setSelectedOrder(null)}
-                className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                onClick={() => {
+                  setSelectedOrder(null);
+                  setStatusFeedback(null);
+                }}
+                className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition self-end sm:self-center"
                 title="Fechar"
               >
                 <X className="w-5 h-5" />
@@ -2029,6 +2249,24 @@ export default function AdminPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+            {/* Status Feedback Banner */}
+            {statusFeedback && (
+              <div
+                className={`p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition animate-fadeIn ${
+                  statusFeedback.type === "success"
+                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                    : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                }`}
+              >
+                {statusFeedback.type === "success" ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                )}
+                <span>{statusFeedback.message}</span>
+              </div>
+            )}
 
             {/* Customer and Delivery Info */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -2103,58 +2341,225 @@ export default function AdminPage() {
                   value={trackingInput}
                   onChange={(e) => setTrackingInput(e.target.value.toUpperCase())}
                   placeholder="Ex: BR123456789SP"
-                  className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 font-mono text-xs text-white"
+                  disabled={updatingOrderId === selectedOrder.id}
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 font-mono text-xs text-white focus:outline-none focus:border-cyan-500 disabled:opacity-50"
                 />
                 <button
+                  type="button"
+                  disabled={updatingOrderId === selectedOrder.id}
                   onClick={() =>
-                    handleUpdateOrderStatus(
-                      selectedOrder.id,
-                      selectedOrder.paymentStatus,
-                      trackingInput
-                    )
+                    handleUpdateOrderStatus(selectedOrder.id, {
+                      trackingCode: trackingInput,
+                    })
                   }
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white"
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5 shrink-0"
                 >
-                  Salvar Rastreio
+                  {updatingOrderId === selectedOrder.id ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Save className="w-3.5 h-3.5" />
+                  )}
+                  <span>Salvar Rastreio</span>
                 </button>
               </div>
+              {selectedOrder.trackingCode && (
+                <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-1.5 pt-1">
+                  <span>Rastreio salvo:</span>
+                  <span className="font-mono font-bold text-cyan-400">{selectedOrder.trackingCode}</span>
+                  <a
+                    href={`https://rastreamento.correios.com.br/app/index.php?objeto=${selectedOrder.trackingCode}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-cyan-400 hover:underline flex items-center gap-0.5 ml-1.5"
+                  >
+                    <span>Consultar Correios</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* Status Actions */}
-            <div className="pt-2 border-t border-slate-800 space-y-3">
-              <div className="text-xs font-bold text-slate-400">Alterar Status do Pedido:</div>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                <button
-                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "APPROVED", undefined, "PAGO")}
-                  className="py-2.5 px-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white text-center"
-                >
-                  Aprovar Pagamento
-                </button>
-                <button
-                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "APPROVED", undefined, "SEPARANDO")}
-                  className="py-2.5 px-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white text-center"
-                >
-                  Em Separação
-                </button>
-                <button
-                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "SHIPPED", undefined, "ENVIADO")}
-                  className="py-2.5 px-2 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white text-center"
-                >
-                  Enviado
-                </button>
-                <button
-                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "DELIVERED", undefined, "ENTREGUE")}
-                  className="py-2.5 px-2 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-500 text-white text-center"
-                >
-                  Entregue
-                </button>
-                <button
-                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "CANCELLED", undefined, "CANCELADO")}
-                  className="py-2.5 px-2 rounded-xl text-xs font-bold bg-rose-600/80 hover:bg-rose-600 text-white text-center"
-                >
-                  Cancelar
-                </button>
+            {/* Status Actions */}
+            <div className="pt-3 border-t border-slate-800 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-300">
+                    Alterar Status do Pedido:
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    (Selecione no menu ou clique nos botões rápidos)
+                  </span>
+                </div>
+                {updatingOrderId === selectedOrder.id && (
+                  <span className="text-[11px] text-cyan-400 font-bold flex items-center gap-1.5 animate-pulse">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span>Atualizando no servidor...</span>
+                  </span>
+                )}
               </div>
+
+              {/* 1. Explicit Dropdown Selector + Confirm Button */}
+              <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-2.5">
+                <label htmlFor="order-status-select" className="block text-xs font-bold text-slate-300">
+                  Seletor de Status (Dropdown):
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <select
+                    id="order-status-select"
+                    value={statusSelectValue}
+                    onChange={(e) => setStatusSelectValue(e.target.value)}
+                    disabled={Boolean(updatingOrderId)}
+                    className="flex-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer disabled:opacity-50"
+                  >
+                    <option value="REALIZADO">⏳ Aguardando Pagamento (Pendente)</option>
+                    <option value="PAGO">✅ Pagamento Aprovado (Pago)</option>
+                    <option value="SEPARANDO">📦 Em Separação (Preparando Pacote)</option>
+                    <option value="ENVIADO">🚚 Enviado / Em Trânsito</option>
+                    <option value="ENTREGUE">🎉 Entregue ao Cliente</option>
+                    <option value="CANCELADO">❌ Cancelado</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    disabled={Boolean(updatingOrderId)}
+                    onClick={() => handleApplyStatus(statusSelectValue)}
+                    className="px-5 py-2.5 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0 cursor-pointer shadow-lg shadow-cyan-900/20"
+                  >
+                    {updatingOrderId === selectedOrder.id ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    <span>Salvar Status Selecionado</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. Direct 1-Click Status Buttons (All 6 Stages) */}
+              <div>
+                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Ou clique direto no novo status:
+                </div>
+
+                {(() => {
+                  const currentNorm = getNormalizedStatus(selectedOrder);
+
+                  const statusButtons = [
+                    {
+                      id: "REALIZADO",
+                      label: "Aguardando Pagto",
+                      sublabel: "Pendente",
+                      icon: Clock,
+                      color: "amber",
+                      activeClass: "bg-amber-600 ring-2 ring-white/90 shadow-xl shadow-amber-900/40 scale-[1.03]",
+                      inactiveClass: "bg-amber-600/30 hover:bg-amber-600/70 border border-amber-500/30 text-amber-200",
+                    },
+                    {
+                      id: "PAGO",
+                      label: "Aprovar Pagto",
+                      sublabel: "Aprovado",
+                      icon: Check,
+                      color: "emerald",
+                      activeClass: "bg-emerald-600 ring-2 ring-white/90 shadow-xl shadow-emerald-900/40 scale-[1.03]",
+                      inactiveClass: "bg-emerald-600/30 hover:bg-emerald-600/70 border border-emerald-500/30 text-emerald-200",
+                    },
+                    {
+                      id: "SEPARANDO",
+                      label: "Em Separação",
+                      sublabel: "Embalando",
+                      icon: Package,
+                      color: "indigo",
+                      activeClass: "bg-indigo-600 ring-2 ring-white/90 shadow-xl shadow-indigo-900/40 scale-[1.03]",
+                      inactiveClass: "bg-indigo-600/30 hover:bg-indigo-600/70 border border-indigo-500/30 text-indigo-200",
+                    },
+                    {
+                      id: "ENVIADO",
+                      label: "Enviado",
+                      sublabel: "Em Trânsito",
+                      icon: Truck,
+                      color: "cyan",
+                      activeClass: "bg-cyan-600 ring-2 ring-white/90 shadow-xl shadow-cyan-900/40 scale-[1.03]",
+                      inactiveClass: "bg-cyan-600/30 hover:bg-cyan-600/70 border border-cyan-500/30 text-cyan-200",
+                    },
+                    {
+                      id: "ENTREGUE",
+                      label: "Entregue",
+                      sublabel: "Concluído",
+                      icon: CheckCircle2,
+                      color: "teal",
+                      activeClass: "bg-teal-600 ring-2 ring-white/90 shadow-xl shadow-teal-900/40 scale-[1.03]",
+                      inactiveClass: "bg-teal-600/30 hover:bg-teal-600/70 border border-teal-500/30 text-teal-200",
+                    },
+                    {
+                      id: "CANCELADO",
+                      label: "Cancelar",
+                      sublabel: "Cancelado",
+                      icon: XCircle,
+                      color: "rose",
+                      activeClass: "bg-rose-600 ring-2 ring-white/90 shadow-xl shadow-rose-900/40 scale-[1.03]",
+                      inactiveClass: "bg-rose-600/30 hover:bg-rose-600/70 border border-rose-500/30 text-rose-200",
+                    },
+                  ];
+
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                      {statusButtons.map((btn) => {
+                        const Icon = btn.icon;
+                        const isActive = currentNorm === btn.id;
+
+                        return (
+                          <button
+                            key={btn.id}
+                            type="button"
+                            disabled={Boolean(updatingOrderId)}
+                            onClick={() => handleApplyStatus(btn.id)}
+                            className={`py-3 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 active:scale-95 disabled:opacity-50 cursor-pointer text-white ${
+                              isActive ? btn.activeClass : btn.inactiveClass
+                            }`}
+                          >
+                            <div className="flex items-center gap-1">
+                              {isActive ? (
+                                <Check className="w-3.5 h-3.5 stroke-[3] text-white" />
+                              ) : (
+                                <Icon className="w-3.5 h-3.5 opacity-80" />
+                              )}
+                              <span className="truncate">{btn.label}</span>
+                            </div>
+                            <span
+                              className={`text-[9px] uppercase font-black tracking-wider px-1.5 py-0.5 rounded ${
+                                isActive
+                                  ? "bg-black/30 text-white font-extrabold ring-1 ring-white/50"
+                                  : "opacity-75"
+                              }`}
+                            >
+                              {isActive ? "✓ Status Atual" : btn.sublabel}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* In-line status feedback */}
+              {statusFeedback && (
+                <div
+                  className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 transition animate-fadeIn ${
+                    statusFeedback.type === "success"
+                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                      : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                  }`}
+                >
+                  {statusFeedback.type === "success" ? (
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                  )}
+                  <span>{statusFeedback.message}</span>
+                </div>
+              )}
 
               {/* WhatsApp message button */}
               <a

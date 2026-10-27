@@ -24,7 +24,9 @@ import {
   Sparkles,
   MapPin,
   Calendar,
+  CreditCard,
 } from "lucide-react";
+import { MercadoPagoModal } from "@/components/MercadoPagoModal";
 
 interface OrderDetailViewProps {
   orderId: string;
@@ -43,6 +45,7 @@ export function OrderDetailView({
   const [copied, setCopied] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [timeLeft, setTimeLeft] = useState(900); // 15 mins for PIX
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch and sync order
   const fetchOrder = async () => {
@@ -440,16 +443,29 @@ export function OrderDetailView({
                 </button>
               )}
 
-              {order.mercadoPagoUrl && (
-                <a
-                  href={order.mercadoPagoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3 px-4 rounded-xl font-extrabold text-xs uppercase tracking-wider bg-sky-500 hover:bg-sky-400 text-white transition flex items-center justify-center gap-2 shadow"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>Pagar no Checkout Oficial Mercado Pago</span>
-                </a>
+              {(order.preferenceId || order.mercadoPagoUrl) && (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(true)}
+                    className="w-full py-3.5 px-4 rounded-xl font-extrabold text-xs uppercase tracking-wider bg-sky-500 hover:bg-sky-400 text-white transition flex items-center justify-center gap-2 shadow cursor-pointer"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>Finalizar Pagamento no Modal Mercado Pago</span>
+                  </button>
+                  {order.mercadoPagoUrl && (
+                    <div className="text-center">
+                      <a
+                        href={order.mercadoPagoUrl}
+                        target="_self"
+                        className="text-[11px] text-sky-500 hover:underline inline-flex items-center gap-1"
+                      >
+                        <span>Abrir na página do Mercado Pago (mesma aba)</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
+                </div>
               )}
 
               <p className="text-[11px] text-slate-500 text-center">
@@ -598,6 +614,31 @@ export function OrderDetailView({
           </Link>
         </div>
       </div>
+
+      {/* Mercado Pago Payment Modal */}
+      {order && (
+        <MercadoPagoModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          orderId={order.id}
+          preferenceId={order.preferenceId || ""}
+          initPoint={order.mercadoPagoUrl || undefined}
+          publicKey={
+            process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ||
+            "APP_USR-99be3c75-f500-49f6-90c9-61483019d51f"
+          }
+          total={order.total}
+          customer={{
+            name: order.customerName,
+            email: order.customerEmail,
+            cpf: order.customerCpf,
+            phone: order.customerPhone,
+          }}
+          onPaymentSuccess={() => {
+            fetchOrder();
+          }}
+        />
+      )}
     </div>
   );
 }
