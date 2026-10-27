@@ -11,6 +11,7 @@ export default async function HomePage() {
       orderBy: { createdAt: "desc" },
       include: {
         variants: true,
+        category: true,
       },
     });
     products = JSON.parse(JSON.stringify(rawProducts));

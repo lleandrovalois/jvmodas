@@ -16,6 +16,13 @@ import {
   Package,
 } from "lucide-react";
 
+const normalize = (str?: string | null) =>
+  (str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
 export function Navbar({
   onSearchChange,
   currentCategory,
@@ -209,7 +216,9 @@ export function Navbar({
         <div className="hidden lg:block border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center gap-8 py-2.5">
             {categories.map((cat) => {
-              const active = currentCategory === cat || (!currentCategory && cat === "Todos");
+              const active =
+                normalize(currentCategory) === normalize(cat) ||
+                (!currentCategory && normalize(cat) === "todos");
               return (
                 <button
                   key={cat}
@@ -246,7 +255,8 @@ export function Navbar({
                     setMobileMenuOpen(false);
                   }}
                   className={`text-left px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                    currentCategory === cat || (!currentCategory && cat === "Todos")
+                    normalize(currentCategory) === normalize(cat) ||
+                    (!currentCategory && normalize(cat) === "todos")
                       ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400"
                       : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                   }`}

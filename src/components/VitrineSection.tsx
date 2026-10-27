@@ -15,6 +15,14 @@ import {
   Sparkles,
 } from "lucide-react";
 
+// Helper to normalize strings for accent-insensitive, case-insensitive comparison
+const normalize = (str?: string | null) =>
+  (str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
 export function VitrineSection({
   initialProducts,
   initialCategory = "Todos",
@@ -24,11 +32,41 @@ export function VitrineSection({
   initialCategory?: string;
   searchTerm?: string;
 }) {
+  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<string>("recent");
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+
+  // Sync products when initialProducts changes
+  useEffect(() => {
+    setProducts(initialProducts);
+  }, [initialProducts]);
+
+  // Sync selectedCategory when parent initialCategory changes
+  useEffect(() => {
+    if (initialCategory) {
+      setSelectedCategory(initialCategory);
+    }
+  }, [initialCategory]);
+
+  // Client-side fallback fetch to ensure products have category objects populated
+  useEffect(() => {
+    const needsFetch =
+      products.length === 0 ||
+      products.some((p) => p.categoryId && (!p.category || typeof p.category !== "object"));
+    if (needsFetch) {
+      fetch("/api/products")
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setProducts(data);
+          }
+        })
+        .catch((e) => console.warn("Failed to refresh products with categories:", e));
+    }
+  }, [products]);
 
   const [categories, setCategories] = useState<string[]>([
     "Todos",
@@ -59,28 +97,41 @@ export function VitrineSection({
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
-    return initialProducts.filter((product) => {
-      const prodCatName = typeof product.category === "object" ? product.category?.name : (product.category || "");
+    return products.filter((product) => {
+      const normSelected = normalize(selectedCategory);
 
-      // Category filter
-      if (selectedCategory !== "Todos" && prodCatName !== selectedCategory) {
-        return false;
+      // Category filter (normalized, matching by name, slug, or categoryId)
+      if (normSelected && normSelected !== "todos") {
+        const catObj = typeof product.category === "object" ? product.category : null;
+        const catName = catObj?.name || (typeof product.category === "string" ? product.category : "");
+        const catSlug = catObj?.slug || "";
+        const catId = product.categoryId || catObj?.id || "";
+
+        const matchesCat =
+          normalize(catName) === normSelected ||
+          normalize(catSlug) === normSelected ||
+          normalize(catId) === normSelected;
+
+        if (!matchesCat) return false;
       }
 
       // Size filter
       if (selectedSize) {
-        const hasSize = product.variants.some(
-          (v) => v.size === selectedSize && v.stock > 0
+        const normSelectedSize = normalize(selectedSize);
+        const hasSize = product.variants?.some(
+          (v) => normalize(v.size) === normSelectedSize && v.stock > 0
         );
         if (!hasSize) return false;
       }
 
       // Search term filter
       if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        const matchesName = product.name.toLowerCase().includes(term);
-        const matchesDesc = product.description.toLowerCase().includes(term);
-        const matchesCategory = (prodCatName || "").toLowerCase().includes(term);
+        const term = normalize(searchTerm);
+        const catObj = typeof product.category === "object" ? product.category : null;
+        const catName = catObj?.name || (typeof product.category === "string" ? product.category : "");
+        const matchesName = normalize(product.name).includes(term);
+        const matchesDesc = normalize(product.description).includes(term);
+        const matchesCategory = normalize(catName).includes(term);
         if (!matchesName && !matchesDesc && !matchesCategory) return false;
       }
 
@@ -93,7 +144,7 @@ export function VitrineSection({
       // recent
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [initialProducts, selectedCategory, selectedSize, searchTerm, sortBy]);
+  }, [products, selectedCategory, selectedSize, searchTerm, sortBy]);
 
   return (
     <section id="vitrine" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -109,7 +160,7 @@ export function VitrineSection({
             className="text-2xl sm:text-3xl font-black tracking-tight uppercase"
             style={{ color: "var(--text-primary)" }}
           >
-            {selectedCategory === "Todos" ? "Moda Fitness em Destaque" : `Coleção: ${selectedCategory}`}
+            {normalize(selectedCategory) === "todos" ? "Moda Fitness em Destaque" : `Coleção: ${selectedCategory}`}
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
             Exibindo <strong>{filteredProducts.length}</strong> produtos prontos para envio
@@ -146,7 +197,7 @@ export function VitrineSection({
         {/* Categories */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           {categories.map((cat) => {
-            const isSelected = selectedCategory === cat;
+            const isSelected = normalize(selectedCategory) === normalize(cat);
             return (
               <button
                 key={cat}
