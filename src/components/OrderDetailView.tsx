@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { Order } from "@/types";
@@ -47,8 +47,15 @@ export function OrderDetailView({
   const [timeLeft, setTimeLeft] = useState(900); // 15 mins for PIX
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // References to prevent loop re-renders
+  const isModalOpenRef = useRef(isModalOpen);
+  isModalOpenRef.current = isModalOpen;
+
+  const orderRef = useRef(order);
+  orderRef.current = order;
+
   // Fetch and sync order
-  const fetchOrder = async () => {
+  const fetchOrder = useCallback(async () => {
     try {
       // 1. If we have initialPaymentId or order is pending, try instant sync with MP
       if (initialPaymentId) {
@@ -82,20 +89,35 @@ export function OrderDetailView({
     } finally {
       setLoading(false);
     }
-  };
+  }, [initialPaymentId, orderId]);
 
   useEffect(() => {
     fetchOrder();
 
     // Auto-poll every 4 seconds if pending to capture webhook or bank approval
     const interval = setInterval(() => {
-      if (!order || order.paymentStatus === "PENDING") {
-        fetchOrder();
-      }
+      // Do not poll while modal is open to prevent unmounting/looping of the Payment Brick
+      if (isModalOpenRef.current) return;
+      if (orderRef.current?.paymentStatus === "APPROVED") return;
+      fetchOrder();
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [orderId]);
+  }, [fetchOrder]);
+
+  const customerData = useMemo(() => {
+    if (!order) return { name: "", email: "", cpf: "", phone: "" };
+    return {
+      name: order.customerName,
+      email: order.customerEmail,
+      cpf: order.customerCpf,
+      phone: order.customerPhone,
+    };
+  }, [order?.customerName, order?.customerEmail, order?.customerCpf, order?.customerPhone]);
+
+  const handlePaymentSuccess = useCallback(() => {
+    fetchOrder();
+  }, [fetchOrder]);
 
   // Pix timer
   useEffect(() => {
@@ -652,15 +674,8 @@ export function OrderDetailView({
             "APP_USR-99be3c75-f500-49f6-90c9-61483019d51f"
           }
           total={order.total}
-          customer={{
-            name: order.customerName,
-            email: order.customerEmail,
-            cpf: order.customerCpf,
-            phone: order.customerPhone,
-          }}
-          onPaymentSuccess={() => {
-            fetchOrder();
-          }}
+          customer={customerData}
+          onPaymentSuccess={handlePaymentSuccess}
         />
       )}
     </div>

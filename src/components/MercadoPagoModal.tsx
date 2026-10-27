@@ -80,7 +80,20 @@ export function MercadoPagoModal({
     }
   }, [total]);
 
-  // References
+  // References to prevent re-render loops from parent updates
+  const customerRef = useRef(customer);
+  customerRef.current = customer;
+
+  const onPaymentSuccessRef = useRef(onPaymentSuccess);
+  onPaymentSuccessRef.current = onPaymentSuccess;
+
+  const initPointRef = useRef(initPoint);
+  initPointRef.current = initPoint;
+
+  // Track if brick is already successfully mounted or currently in-flight
+  const mountedOrderIdRef = useRef<string | null>(null);
+  const isInitializingRef = useRef(false);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const brickControllerRef = useRef<any>(null);
   const containerId = "mercadopago-brick-container";
@@ -123,6 +136,8 @@ export function MercadoPagoModal({
       }
       brickControllerRef.current = null;
     }
+    mountedOrderIdRef.current = null;
+    isInitializingRef.current = false;
   }, []);
 
   // Initialize Payment Brick
@@ -132,7 +147,13 @@ export function MercadoPagoModal({
       return;
     }
 
+    // CRITICAL: If the brick is already mounted for this orderId or currently in-flight, DO NOT remount!
+    if (mountedOrderIdRef.current === orderId || isInitializingRef.current) {
+      return;
+    }
+
     isMountedRef.current = true;
+    isInitializingRef.current = true;
     setLoadingBrick(true);
     setBrickError(null);
     setSubmitError(null);
@@ -157,7 +178,10 @@ export function MercadoPagoModal({
         });
       }
 
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current) {
+        isInitializingRef.current = false;
+        return;
+      }
 
       try {
         // Ensure old brick is unmounted before creating a new one
@@ -191,6 +215,7 @@ export function MercadoPagoModal({
         }
 
         if (validAmount <= 0) {
+          isInitializingRef.current = false;
           throw new Error("Valor do pedido inválido ou não informado. Recarregue a página.");
         }
 
@@ -200,9 +225,10 @@ export function MercadoPagoModal({
 
         const bricksBuilder = mp.bricks();
 
-        const [firstName, ...rest] = (customer.name || "Cliente").trim().split(" ");
+        const curCustomer = customerRef.current;
+        const [firstName, ...rest] = (curCustomer?.name || "Cliente").trim().split(" ");
         const lastName = rest.join(" ") || "Cliente";
-        const cleanCpf = (customer.cpf || "").replace(/\D/g, "");
+        const cleanCpf = (curCustomer?.cpf || "").replace(/\D/g, "");
 
         const isDark = document.documentElement.classList.contains("dark");
 
@@ -211,7 +237,7 @@ export function MercadoPagoModal({
             amount: Number(validAmount.toFixed(2)),
             preferenceId: effectivePrefId || undefined,
             payer: {
-              email: customer.email,
+              email: curCustomer?.email,
               firstName,
               lastName,
               identification: {
@@ -235,12 +261,28 @@ export function MercadoPagoModal({
             onReady: () => {
               if (isMountedRef.current) {
                 setLoadingBrick(false);
+                mountedOrderIdRef.current = orderId;
+                isInitializingRef.current = false;
               }
             },
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             onSubmit: ({ formData }: { formData: any }) => {
               return new Promise<void>((resolve, reject) => {
                 setSubmitError(null);
+
+                // If user selected Mercado Pago account and it requires wallet redirect
+                if (
+                  formData?.payment_type_id === "wallet" ||
+                  formData?.payment_method_id === "account_money" ||
+                  formData?.payment_method_id === "consumer_credits"
+                ) {
+                  const targetUrl = initPointRef.current;
+                  if (targetUrl) {
+                    window.location.href = targetUrl;
+                    resolve();
+                    return;
+                  }
+                }
 
                 fetch("/api/checkout/process-payment", {
                   method: "POST",
@@ -263,8 +305,8 @@ export function MercadoPagoModal({
                     if (data.status === "approved") {
                       setPaymentState("approved");
                       triggerConfetti();
-                      if (onPaymentSuccess) {
-                        onPaymentSuccess(orderId);
+                      if (onPaymentSuccessRef.current) {
+                        onPaymentSuccessRef.current(orderId);
                       }
                       setTimeout(() => {
                         router.push(`/pedido/sucesso?external_reference=${orderId}&status=approved`);
@@ -297,6 +339,7 @@ export function MercadoPagoModal({
               console.warn("Mercado Pago Brick error notice:", error);
               if (isMountedRef.current) {
                 setLoadingBrick(false);
+                isInitializingRef.current = false;
               }
             },
           },
@@ -305,12 +348,16 @@ export function MercadoPagoModal({
         const controller = await bricksBuilder.create("payment", containerId, settings);
         if (isMountedRef.current) {
           brickControllerRef.current = controller;
+          mountedOrderIdRef.current = orderId;
+          isInitializingRef.current = false;
         } else {
           controller.unmount();
+          isInitializingRef.current = false;
         }
       } catch (err: unknown) {
         if (isMountedRef.current) {
           setLoadingBrick(false);
+          isInitializingRef.current = false;
           setBrickError(
             err instanceof Error
               ? err.message
@@ -325,7 +372,6 @@ export function MercadoPagoModal({
     return () => {
       isMountedRef.current = false;
       clearInterval(checkInterval);
-      unmountBrick();
     };
   }, [
     isOpen,
@@ -333,12 +379,7 @@ export function MercadoPagoModal({
     orderId,
     preferenceId,
     publicKey,
-    total,
-    customer,
     unmountBrick,
-    onPaymentSuccess,
-    router,
-    triggerConfetti,
   ]);
 
   // PIX Countdown Timer
