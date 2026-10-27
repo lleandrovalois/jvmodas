@@ -4,7 +4,7 @@ import { createAdminSession } from "@/lib/auth";
 export async function POST(req: Request) {
   try {
     const { password } = await req.json();
-    const correctPassword = process.env.ADMIN_PASSWORD || "admin123";
+    const correctPassword = process.env.ADMIN_PASSWORD || "jv291615";
 
     if (!password || password !== correctPassword) {
       return NextResponse.json(

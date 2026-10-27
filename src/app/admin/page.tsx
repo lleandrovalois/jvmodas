@@ -609,12 +609,9 @@ export default function AdminPage() {
                 required
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                placeholder="Digite a senha (padrão: admin123)"
+                placeholder="Digite sua senha de acesso"
                 className="w-full px-4 py-3 rounded-xl bg-slate-800/80 border border-slate-700 text-white placeholder:text-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 font-mono"
               />
-              <p className="text-[11px] text-slate-500 mt-1.5">
-                Dica de demonstração: senha padrão <strong>admin123</strong>
-              </p>
             </div>
 
             <button

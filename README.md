@@ -34,7 +34,7 @@
   - Botão **"Acompanhar Pedido pelo WhatsApp"** com mensagem pré-formatada contendo o número do pedido, itens e dados do cliente.
 
 ### 3. Painel CMS Administrativo (`/admin`)
-- **Acesso Protegido:** Autenticação com cookies seguros (`httpOnly`) e senha configurável via `.env` (padrão: `admin123`).
+- **Acesso Protegido:** Autenticação com cookies seguros (`httpOnly`) e senha configurável via `.env` (padrão: `jv291615`).
 - **Dashboard com Métricas em Tempo Real:**
   - Faturamento total aprovado (R$).
   - Quantidade de pedidos totais e aprovados.
@@ -142,7 +142,7 @@ npm run dev -- -p 3005
 
 Acesse no seu navegador:
 - **E-commerce:** [http://localhost:3005](http://localhost:3005)
-- **Painel Administrativo:** [http://localhost:3005/admin](http://localhost:3005/admin) (Senha: `admin123`)
+- **Painel Administrativo:** [http://localhost:3005/admin](http://localhost:3005/admin) (Senha: `jv291615`)
 
 ---
 

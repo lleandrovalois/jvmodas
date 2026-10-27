@@ -19,7 +19,7 @@ async function main() {
     data: {
       email: "admin@jvmodas.com.br",
       name: "Administrador JVMODAS",
-      password: "admin123", // In production, hash with bcrypt/argon2
+      password: "jv291615", // In production, hash with bcrypt/argon2
       role: "ADMIN",
     },
   });
