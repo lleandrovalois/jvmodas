@@ -15,6 +15,12 @@ else
   sqlite3 /app/data/jvmodas.db "ALTER TABLE cms_settings ADD COLUMN buttonTextColor TEXT DEFAULT '#ffffff';" 2>/dev/null || true
   sqlite3 /app/data/jvmodas.db "ALTER TABLE cms_settings ADD COLUMN activePreset TEXT DEFAULT 'dark-fitness';" 2>/dev/null || true
 
+  # Garante colunas de status e integração Mercado Pago para pedidos
+  sqlite3 /app/data/jvmodas.db "ALTER TABLE orders ADD COLUMN orderStatus TEXT DEFAULT 'REALIZADO';" 2>/dev/null || true
+  sqlite3 /app/data/jvmodas.db "ALTER TABLE orders ADD COLUMN preferenceId TEXT;" 2>/dev/null || true
+  sqlite3 /app/data/jvmodas.db "ALTER TABLE orders ADD COLUMN paymentId TEXT;" 2>/dev/null || true
+  sqlite3 /app/data/jvmodas.db "ALTER TABLE orders ADD COLUMN mercadoPagoUrl TEXT;" 2>/dev/null || true
+
   # Garante criação da tabela categories e coluna categoryId em products
   sqlite3 /app/data/jvmodas.db "CREATE TABLE IF NOT EXISTS categories (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE, slug TEXT NOT NULL UNIQUE, description TEXT, isActive BOOLEAN NOT NULL DEFAULT 1, createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP);" 2>/dev/null || true
   sqlite3 /app/data/jvmodas.db "CREATE INDEX IF NOT EXISTS categories_slug_idx ON categories(slug);" 2>/dev/null || true
