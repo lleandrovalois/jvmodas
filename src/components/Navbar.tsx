@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   UserCheck,
+  Package,
 } from "lucide-react";
 
 export function Navbar({
@@ -143,7 +144,17 @@ export function Navbar({
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* Meus Pedidos Link Badge */}
+            <Link
+              href="/meus-pedidos"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors border border-slate-200/60 dark:border-slate-700"
+              title="Acompanhar Meus Pedidos"
+            >
+              <Package className="w-3.5 h-3.5 text-rose-500" />
+              <span>Meus Pedidos</span>
+            </Link>
+
             {/* Admin Link Badge */}
             <Link
               href="/admin"
@@ -245,7 +256,15 @@ export function Navbar({
               ))}
             </div>
 
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              <Link
+                href="/meus-pedidos"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 transition"
+              >
+                <Package className="w-4 h-4" />
+                <span>Acompanhar Meus Pedidos</span>
+              </Link>
               <Link
                 href="/admin"
                 onClick={() => setMobileMenuOpen(false)}

@@ -90,8 +90,12 @@ model Order {
   discount             Float       @default(0)
   total                Float
   couponCode           String?
-  paymentMethod        String      // PIX, CREDIT_CARD
+  paymentMethod        String      @default("MERCADO_PAGO") // PIX, CREDIT_CARD, MERCADO_PAGO
   paymentStatus        String      @default("PENDING") // PENDING, APPROVED, CANCELLED, SHIPPED
+  orderStatus          String      @default("REALIZADO") // REALIZADO, PAGO, SEPARANDO, ENVIADO, ENTREGUE, CANCELADO
+  preferenceId         String?
+  paymentId            String?
+  mercadoPagoUrl       String?
   trackingCode         String?
   pixQrCodeUrl         String?
   pixCopyPasteCode     String?

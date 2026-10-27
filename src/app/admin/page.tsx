@@ -415,17 +415,26 @@ export default function AdminPage() {
   };
 
   // Order status update
-  const handleUpdateOrderStatus = async (orderId: string, status: string, tracking?: string) => {
+  const handleUpdateOrderStatus = async (orderId: string, status: string, tracking?: string, customOrderStatus?: string) => {
     try {
+      let orderStatus = customOrderStatus || "REALIZADO";
+      if (!customOrderStatus) {
+        if (status === "APPROVED") orderStatus = "PAGO";
+        else if (status === "SEPARATING") orderStatus = "SEPARANDO";
+        else if (status === "SHIPPED") orderStatus = "ENVIADO";
+        else if (status === "DELIVERED") orderStatus = "ENTREGUE";
+        else if (status === "CANCELLED") orderStatus = "CANCELADO";
+      }
+
       await fetch(`/api/orders/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentStatus: status, trackingCode: tracking }),
+        body: JSON.stringify({ paymentStatus: status, orderStatus, trackingCode: tracking }),
       });
       fetchOrders();
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder((prev) =>
-          prev ? { ...prev, paymentStatus: status as Order["paymentStatus"], trackingCode: tracking || prev.trackingCode } : null
+          prev ? { ...prev, paymentStatus: status, orderStatus, trackingCode: tracking || prev.trackingCode } : null
         );
       }
     } catch (e) {
@@ -2114,24 +2123,36 @@ export default function AdminPage() {
             {/* Status Actions */}
             <div className="pt-2 border-t border-slate-800 space-y-3">
               <div className="text-xs font-bold text-slate-400">Alterar Status do Pedido:</div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <button
-                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "APPROVED")}
-                  className="py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white"
+                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "APPROVED", undefined, "PAGO")}
+                  className="py-2.5 px-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white text-center"
                 >
                   Aprovar Pagamento
                 </button>
                 <button
-                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "SHIPPED")}
-                  className="py-2.5 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white"
+                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "APPROVED", undefined, "SEPARANDO")}
+                  className="py-2.5 px-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white text-center"
                 >
-                  Marcar como Enviado
+                  Em Separação
                 </button>
                 <button
-                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "CANCELLED")}
-                  className="py-2.5 rounded-xl text-xs font-bold bg-rose-600/80 hover:bg-rose-600 text-white"
+                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "SHIPPED", undefined, "ENVIADO")}
+                  className="py-2.5 px-2 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white text-center"
                 >
-                  Cancelar Pedido
+                  Enviado
+                </button>
+                <button
+                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "DELIVERED", undefined, "ENTREGUE")}
+                  className="py-2.5 px-2 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-500 text-white text-center"
+                >
+                  Entregue
+                </button>
+                <button
+                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, "CANCELLED", undefined, "CANCELADO")}
+                  className="py-2.5 px-2 rounded-xl text-xs font-bold bg-rose-600/80 hover:bg-rose-600 text-white text-center"
+                >
+                  Cancelar
                 </button>
               </div>
 

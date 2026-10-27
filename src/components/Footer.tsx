@@ -119,6 +119,14 @@ export function Footer() {
                 <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
                 <span>São Paulo - SP | Envio para todo o Brasil</span>
               </li>
+              <li className="pt-1">
+                <Link
+                  href="/meus-pedidos"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-400 hover:text-rose-300 transition"
+                >
+                  <span>📦 Acompanhar Meus Pedidos</span>
+                </Link>
+              </li>
             </ul>
           </div>
 

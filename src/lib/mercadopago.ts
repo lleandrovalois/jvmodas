@@ -85,6 +85,8 @@ interface CreatePreferenceParams {
   payer: {
     name: string;
     email: string;
+    cpf?: string;
+    phone?: string;
   };
   shippingPrice?: number;
   backUrls?: {
@@ -93,6 +95,7 @@ interface CreatePreferenceParams {
     pending: string;
   };
   notificationUrl?: string;
+  autoReturn?: "approved" | "all";
 }
 
 export async function createMercadoPagoPreference({
@@ -102,6 +105,7 @@ export async function createMercadoPagoPreference({
   shippingPrice = 0,
   backUrls,
   notificationUrl,
+  autoReturn,
 }: CreatePreferenceParams) {
   try {
     const preferenceItems = items.map((item) => ({
@@ -124,18 +128,53 @@ export async function createMercadoPagoPreference({
       });
     }
 
-    const res = await mpPreference.create({
-      body: {
-        external_reference: orderId,
-        items: preferenceItems,
-        payer: {
-          name: payer.name,
-          email: payer.email,
-        },
-        back_urls: backUrls,
-        notification_url: notificationUrl,
-      },
-    });
+    const cleanCpf = (payer.cpf || "").replace(/\D/g, "");
+    const cleanPhone = (payer.phone || "").replace(/\D/g, "");
+    const [firstName, ...rest] = (payer.name || "").trim().split(" ");
+    const lastName = rest.join(" ") || "Cliente";
+
+    const payerData: any = {
+      name: firstName,
+      surname: lastName,
+      email: payer.email,
+    };
+
+    if (cleanCpf) {
+      payerData.identification = {
+        type: "CPF",
+        number: cleanCpf,
+      };
+    }
+
+    if (cleanPhone && cleanPhone.length >= 10) {
+      payerData.phone = {
+        area_code: cleanPhone.slice(0, 2),
+        number: cleanPhone.slice(2),
+      };
+    }
+
+    const body: any = {
+      external_reference: orderId,
+      items: preferenceItems,
+      payer: payerData,
+      statement_descriptor: "JVMODAS",
+    };
+
+    if (backUrls) {
+      body.back_urls = backUrls;
+      // Auto return only works when back_urls.success is defined and is valid
+      if (autoReturn) {
+        body.auto_return = autoReturn;
+      } else if (backUrls.success && backUrls.success.startsWith("https://")) {
+        body.auto_return = "approved";
+      }
+    }
+
+    if (notificationUrl) {
+      body.notification_url = notificationUrl;
+    }
+
+    const res = await mpPreference.create({ body });
 
     return {
       success: true,

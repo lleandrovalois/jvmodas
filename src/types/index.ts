@@ -121,8 +121,11 @@ export interface Order {
   discount: number;
   total: number;
   couponCode?: string | null;
-  paymentMethod: "PIX" | "CREDIT_CARD";
-  paymentStatus: "PENDING" | "APPROVED" | "CANCELLED" | "SHIPPED";
+  paymentMethod: "PIX" | "CREDIT_CARD" | "MERCADO_PAGO" | string;
+  paymentStatus: "PENDING" | "APPROVED" | "CANCELLED" | "SHIPPED" | string;
+  orderStatus?: "REALIZADO" | "PAGO" | "SEPARANDO" | "ENVIADO" | "ENTREGUE" | "CANCELADO" | string | null;
+  preferenceId?: string | null;
+  paymentId?: string | null;
   trackingCode?: string | null;
   pixQrCodeUrl?: string | null;
   pixCopyPasteCode?: string | null;

@@ -23,10 +23,12 @@ export async function GET(
       );
     }
 
-    let mercadoPagoUrl: string | null = null;
-    if (order.paymentStatus === "PENDING" && order.items.length > 0) {
+    let mercadoPagoUrl: string | null = order.mercadoPagoUrl || null;
+    let preferenceId: string | null = order.preferenceId || null;
+
+    if (!mercadoPagoUrl && order.paymentStatus === "PENDING" && order.items.length > 0) {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://177.7.60.189:3002";
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://jvmodas.klynner.com.br";
         const pref = await createMercadoPagoPreference({
           orderId: order.id,
           items: order.items.map((v) => ({
@@ -39,16 +41,20 @@ export async function GET(
           payer: {
             name: order.customerName,
             email: order.customerEmail,
+            cpf: order.customerCpf,
+            phone: order.customerPhone,
           },
           shippingPrice: order.shippingPrice,
           backUrls: {
-            success: `${baseUrl}/order-confirmed/${order.id}`,
+            success: `${baseUrl}/pedido/sucesso`,
             failure: `${baseUrl}/checkout`,
-            pending: `${baseUrl}/order-confirmed/${order.id}`,
+            pending: `${baseUrl}/pedido/sucesso`,
           },
+          notificationUrl: `${baseUrl}/api/webhooks/mercadopago`,
         });
-        if (pref.success) {
-          mercadoPagoUrl = pref.sandboxInitPoint || pref.initPoint || null;
+        if (pref.success && pref.initPoint) {
+          mercadoPagoUrl = pref.initPoint;
+          preferenceId = pref.preferenceId || null;
         }
       } catch (err) {
         console.warn("Could not generate Mercado Pago URL on get order:", err);
@@ -58,6 +64,7 @@ export async function GET(
     return NextResponse.json({
       ...order,
       mercadoPagoUrl,
+      preferenceId,
     });
   } catch (error) {
     console.error("Error fetching order:", error);
@@ -83,12 +90,13 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await req.json();
-    const { paymentStatus, trackingCode } = body;
+    const { paymentStatus, orderStatus, trackingCode } = body;
 
     const updated = await prisma.order.update({
       where: { id },
       data: {
         ...(paymentStatus ? { paymentStatus } : {}),
+        ...(orderStatus ? { orderStatus } : {}),
         ...(trackingCode !== undefined ? { trackingCode } : {}),
       },
       include: {
