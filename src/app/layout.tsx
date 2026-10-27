@@ -52,12 +52,38 @@ export default async function RootLayout({
     console.error("Could not fetch initial CMS settings in layout", e);
   }
 
+  const bg = initialCms?.backgroundColor || "#0f172a";
+  const bgLower = bg.toLowerCase();
+  const isLight =
+    bgLower === "#ffffff" ||
+    bgLower === "#f8fafc" ||
+    bgLower === "#f1f5f9" ||
+    bgLower.startsWith("#f");
+
   return (
     <html
       lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${isLight ? "light" : "dark"} h-full antialiased`}
+      style={
+        {
+          "--background": bg,
+          "--foreground": initialCms?.textColor || "#f8fafc",
+          "--card-bg": initialCms?.cardColor || "#1e293b",
+          "--text-primary": initialCms?.textColor || "#f8fafc",
+          "--primary-color": initialCms?.primaryColor || "#0f172a",
+          "--secondary-color": initialCms?.secondaryColor || "#e11d48",
+          "--accent-color": initialCms?.accentColor || "#10b981",
+          "--btn-text": initialCms?.buttonTextColor || "#ffffff",
+        } as React.CSSProperties
+      }
     >
-      <body className="min-h-full flex flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <body
+        className="min-h-full flex flex-col antialiased"
+        style={{
+          backgroundColor: "var(--background)",
+          color: "var(--text-primary)",
+        }}
+      >
         <Providers initialCms={initialCms}>{children}</Providers>
       </body>
     </html>

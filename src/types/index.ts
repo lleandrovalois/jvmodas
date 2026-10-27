@@ -49,6 +49,11 @@ export interface CmsSettings {
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
+  backgroundColor: string;
+  cardColor: string;
+  textColor: string;
+  buttonTextColor: string;
+  activePreset?: string;
   topBarText: string;
   topBarActive: boolean;
   heroTitle: string;

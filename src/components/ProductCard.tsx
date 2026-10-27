@@ -104,7 +104,12 @@ export function ProductCard({
   return (
     <div
       onClick={() => onQuickView(product)}
-      className="group relative bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer"
+      className="group relative rounded-2xl overflow-hidden border shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer"
+      style={{
+        backgroundColor: "var(--card-bg)",
+        borderColor: "rgba(148, 163, 184, 0.2)",
+        color: "var(--text-primary)",
+      }}
     >
       {/* 1. IMAGE CONTAINER WITH HOVER EFFECT */}
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
@@ -148,14 +153,23 @@ export function ProductCard({
               e.stopPropagation();
               onQuickView(product);
             }}
-            className="flex-1 py-2.5 px-3 rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-slate-900 dark:text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="flex-1 py-2.5 px-3 rounded-xl backdrop-blur-md font-bold text-xs flex items-center justify-center gap-1.5 shadow-md hover:brightness-95 transition"
+            style={{
+              backgroundColor: "var(--card-bg)",
+              color: "var(--text-primary)",
+              border: "1px solid rgba(148, 163, 184, 0.25)",
+            }}
           >
-            <Eye className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+            <Eye className="w-4 h-4" />
             <span>Ver Detalhes</span>
           </button>
           <button
             onClick={handleQuickAdd}
-            className="p-2.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md hover:brightness-110 active:scale-95 transition"
+            className="p-2.5 rounded-xl shadow-md hover:brightness-110 active:scale-95 transition"
+            style={{
+              backgroundColor: cms.secondaryColor || "#e11d48",
+              color: cms.buttonTextColor || "#ffffff",
+            }}
             title="Adicionar à Sacola"
           >
             <ShoppingBag className="w-4 h-4" />
@@ -177,7 +191,10 @@ export function ProductCard({
           </div>
 
           {/* Product Name */}
-          <h3 className="text-sm font-extrabold text-slate-900 dark:text-white line-clamp-2 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+          <h3
+            className="text-sm font-extrabold line-clamp-2 transition-colors"
+            style={{ color: "var(--text-primary)" }}
+          >
             {product.name}
           </h3>
 
@@ -215,7 +232,10 @@ export function ProductCard({
                 R$ {product.originalPrice.toFixed(2).replace(".", ",")}
               </span>
             )}
-            <span className="text-base font-black text-slate-950 dark:text-white">
+            <span
+              className="text-base font-black"
+              style={{ color: "var(--text-primary)" }}
+            >
               R$ {product.price.toFixed(2).replace(".", ",")}
             </span>
           </div>

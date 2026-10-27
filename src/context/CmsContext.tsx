@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { CmsSettings } from "@/types";
+import { FACTORY_DEFAULT_PRESET } from "@/lib/theme-presets";
 
 interface CmsContextType {
   cms: CmsSettings;
@@ -14,9 +15,14 @@ const defaultSettings: CmsSettings = {
   brandName: "JVMODAS",
   brandTagline: "Moda Fitness de Alta Performance & Estilo",
   logoUrl: "",
-  primaryColor: "#0f172a",
-  secondaryColor: "#e11d48",
-  accentColor: "#10b981",
+  primaryColor: FACTORY_DEFAULT_PRESET.primaryColor,
+  secondaryColor: FACTORY_DEFAULT_PRESET.secondaryColor,
+  accentColor: FACTORY_DEFAULT_PRESET.accentColor,
+  backgroundColor: FACTORY_DEFAULT_PRESET.backgroundColor,
+  cardColor: FACTORY_DEFAULT_PRESET.cardColor,
+  textColor: FACTORY_DEFAULT_PRESET.textColor,
+  buttonTextColor: FACTORY_DEFAULT_PRESET.buttonTextColor,
+  activePreset: FACTORY_DEFAULT_PRESET.id,
   topBarText: "🔥 FRETE GRÁTIS EM COMPRAS ACIMA DE R$ 199 | 10% OFF COM CUPOM: JV10",
   topBarActive: true,
   heroTitle: "SUPERE SEUS LIMITES COM ESTILO E CONFORTO",
@@ -50,9 +56,39 @@ export function CmsProvider({
 
   const applyColorsToRoot = (settings: CmsSettings) => {
     if (typeof document !== "undefined") {
-      document.documentElement.style.setProperty("--primary-color", settings.primaryColor || "#0f172a");
-      document.documentElement.style.setProperty("--secondary-color", settings.secondaryColor || "#e11d48");
-      document.documentElement.style.setProperty("--accent-color", settings.accentColor || "#10b981");
+      const root = document.documentElement;
+      const bg = settings.backgroundColor || FACTORY_DEFAULT_PRESET.backgroundColor;
+      const card = settings.cardColor || FACTORY_DEFAULT_PRESET.cardColor;
+      const text = settings.textColor || FACTORY_DEFAULT_PRESET.textColor;
+      const primary = settings.primaryColor || FACTORY_DEFAULT_PRESET.primaryColor;
+      const secondary = settings.secondaryColor || FACTORY_DEFAULT_PRESET.secondaryColor;
+      const accent = settings.accentColor || FACTORY_DEFAULT_PRESET.accentColor;
+      const btnText = settings.buttonTextColor || FACTORY_DEFAULT_PRESET.buttonTextColor;
+
+      root.style.setProperty("--background", bg);
+      root.style.setProperty("--foreground", text);
+      root.style.setProperty("--card-bg", card);
+      root.style.setProperty("--text-primary", text);
+      root.style.setProperty("--primary-color", primary);
+      root.style.setProperty("--secondary-color", secondary);
+      root.style.setProperty("--accent-color", accent);
+      root.style.setProperty("--btn-text", btnText);
+
+      // Sincroniza classes dark/light para contraste automático de bordas e textos
+      const bgLower = bg.toLowerCase();
+      const isLight =
+        bgLower === "#ffffff" ||
+        bgLower === "#f8fafc" ||
+        bgLower === "#f1f5f9" ||
+        bgLower.startsWith("#f");
+
+      if (isLight) {
+        root.classList.add("light");
+        root.classList.remove("dark");
+      } else {
+        root.classList.add("dark");
+        root.classList.remove("light");
+      }
     }
   };
 

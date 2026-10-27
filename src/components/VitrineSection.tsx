@@ -88,7 +88,10 @@ export function VitrineSection({
             <Flame className="w-4 h-4 fill-current" />
             <span>Catálogo Completo</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+          <h2
+            className="text-2xl sm:text-3xl font-black tracking-tight uppercase"
+            style={{ color: "var(--text-primary)" }}
+          >
             {selectedCategory === "Todos" ? "Moda Fitness em Destaque" : `Coleção: ${selectedCategory}`}
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
@@ -105,7 +108,12 @@ export function VitrineSection({
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+            className="text-xs font-bold border rounded-xl px-3 py-2 focus:outline-none transition-colors"
+            style={{
+              backgroundColor: "var(--card-bg)",
+              color: "var(--text-primary)",
+              borderColor: "rgba(148, 163, 184, 0.25)",
+            }}
           >
             <option value="recent">Mais Recentes</option>
             <option value="best_sellers">Mais Vendidos</option>

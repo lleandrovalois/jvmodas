@@ -21,16 +21,26 @@ export function Footer() {
   )}`;
 
   return (
-    <footer className="w-full bg-slate-950 text-slate-300 border-t border-slate-900 pt-16 pb-10">
+    <footer
+      className="w-full pt-16 pb-10 transition-colors duration-300"
+      style={{
+        backgroundColor: "var(--card-bg)",
+        color: "var(--text-primary)",
+        borderTop: "1px solid rgba(148, 163, 184, 0.15)",
+      }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Main Footer Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 pb-12 border-b border-slate-900">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 pb-12 border-b border-slate-800/40">
           
           {/* 1. Brand Info */}
           <div className="space-y-4">
             <div className="flex flex-col items-start leading-none">
-              <span className="text-2xl font-black tracking-tighter text-white uppercase">
+              <span
+                className="text-2xl font-black tracking-tighter uppercase"
+                style={{ color: "var(--text-primary)" }}
+              >
                 <span style={{ color: cms.secondaryColor || "#e11d48" }}>JV</span>
                 <span>MODAS</span>
               </span>

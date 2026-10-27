@@ -54,7 +54,14 @@ export function Navbar({
       )}
 
       {/* 2. MAIN NAVIGATION BAR */}
-      <nav className="w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 shadow-sm">
+      <nav
+        className="w-full backdrop-blur-md border-b shadow-sm transition-colors duration-300"
+        style={{
+          backgroundColor: "var(--card-bg)",
+          borderColor: "rgba(148, 163, 184, 0.2)",
+          color: "var(--text-primary)",
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
           
           {/* Mobile Menu Button */}
@@ -73,7 +80,10 @@ export function Navbar({
               <img src={cms.logoUrl} alt={cms.brandName} className="h-10 object-contain" />
             ) : (
               <div className="flex flex-col items-start leading-none">
-                <span className="text-2xl sm:text-3xl font-black tracking-tighter text-slate-950 dark:text-white uppercase transition-transform group-hover:scale-105">
+                <span
+                  className="text-2xl sm:text-3xl font-black tracking-tighter uppercase transition-transform group-hover:scale-105"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   <span style={{ color: cms.secondaryColor || "#e11d48" }}>JV</span>
                   <span>MODAS</span>
                 </span>
@@ -124,14 +134,21 @@ export function Navbar({
             {/* Cart Button */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative p-2.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100 transition-transform active:scale-95 shadow-md flex items-center justify-center"
+              className="relative p-2.5 rounded-full transition-transform active:scale-95 shadow-md flex items-center justify-center"
+              style={{
+                backgroundColor: cms.secondaryColor || "#e11d48",
+                color: cms.buttonTextColor || "#ffffff",
+              }}
               aria-label="Abrir Sacola de Compras"
             >
               <ShoppingBag className="w-5 h-5" />
               {cartCount > 0 && (
                 <span
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-xs font-black text-white flex items-center justify-center animate-bounce shadow"
-                  style={{ backgroundColor: cms.secondaryColor || "#e11d48" }}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-xs font-black flex items-center justify-center animate-bounce shadow border border-white/20"
+                  style={{
+                    backgroundColor: cms.accentColor || "#10b981",
+                    color: "#ffffff",
+                  }}
                 >
                   {cartCount}
                 </span>

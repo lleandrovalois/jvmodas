@@ -31,7 +31,15 @@ import {
   RefreshCw,
   X,
   Check,
+  Sun,
+  Moon,
+  RotateCcw,
+  Sparkles,
+  ShieldAlert,
+  Layers,
+  Monitor,
 } from "lucide-react";
+import { THEME_PRESETS, FACTORY_DEFAULT_PRESET, ThemePreset } from "@/lib/theme-presets";
 
 export default function AdminPage() {
   const { cms, refreshCms } = useCms();
@@ -194,6 +202,69 @@ export default function AdminPage() {
       alert("Falha ao salvar configurações.");
     } finally {
       setSavingCms(false);
+    }
+  };
+
+  // Preset handlers
+  const handleApplyPreset = (preset: ThemePreset) => {
+    const updated: CmsSettings = {
+      ...cmsForm,
+      primaryColor: preset.primaryColor,
+      secondaryColor: preset.secondaryColor,
+      accentColor: preset.accentColor,
+      backgroundColor: preset.backgroundColor,
+      cardColor: preset.cardColor,
+      textColor: preset.textColor,
+      buttonTextColor: preset.buttonTextColor,
+      activePreset: preset.id,
+    };
+    setCmsForm(updated);
+    if (typeof document !== "undefined") {
+      const root = document.documentElement;
+      root.style.setProperty("--background", preset.backgroundColor);
+      root.style.setProperty("--foreground", preset.textColor);
+      root.style.setProperty("--card-bg", preset.cardColor);
+      root.style.setProperty("--text-primary", preset.textColor);
+      root.style.setProperty("--primary-color", preset.primaryColor);
+      root.style.setProperty("--secondary-color", preset.secondaryColor);
+      root.style.setProperty("--accent-color", preset.accentColor);
+      root.style.setProperty("--btn-text", preset.buttonTextColor);
+    }
+    setCmsSuccessMessage(`✨ Preset "${preset.name}" aplicado! Clique em "Salvar e Publicar" para confirmar.`);
+    setTimeout(() => setCmsSuccessMessage(""), 5000);
+  };
+
+  const handleRestoreFactoryColors = () => {
+    handleApplyPreset(FACTORY_DEFAULT_PRESET);
+    setCmsSuccessMessage("🛡️ Cores de fábrica (Dark Fitness) restauradas na prévia! Clique em 'Salvar e Publicar' para confirmar.");
+    setTimeout(() => setCmsSuccessMessage(""), 5000);
+  };
+
+  const handleCustomColorChange = (key: keyof CmsSettings, value: string) => {
+    const updated: CmsSettings = {
+      ...cmsForm,
+      [key]: value,
+      activePreset: "custom",
+    };
+    setCmsForm(updated);
+    if (typeof document !== "undefined") {
+      const root = document.documentElement;
+      if (key === "backgroundColor") {
+        root.style.setProperty("--background", value);
+      } else if (key === "cardColor") {
+        root.style.setProperty("--card-bg", value);
+      } else if (key === "textColor") {
+        root.style.setProperty("--text-primary", value);
+        root.style.setProperty("--foreground", value);
+      } else if (key === "secondaryColor") {
+        root.style.setProperty("--secondary-color", value);
+      } else if (key === "accentColor") {
+        root.style.setProperty("--accent-color", value);
+      } else if (key === "buttonTextColor") {
+        root.style.setProperty("--btn-text", value);
+      } else if (key === "primaryColor") {
+        root.style.setProperty("--primary-color", value);
+      }
     }
   };
 
@@ -681,98 +752,505 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Section 1: Colors & Branding */}
-            <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
-              <h3 className="font-extrabold text-sm uppercase tracking-wider text-white pb-3 border-b border-slate-800 flex items-center gap-2">
-                <Palette className="w-4 h-4 text-rose-500" />
-                <span>Paleta de Cores e Marca</span>
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Section 1: Colors, Presets & Recovery Mode */}
+            <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">
-                    Cor Primária (Navbar / Fundo Escuro)
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={cmsForm.primaryColor}
-                      onChange={(e) => setCmsForm({ ...cmsForm, primaryColor: e.target.value })}
-                      className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={cmsForm.primaryColor}
-                      onChange={(e) => setCmsForm({ ...cmsForm, primaryColor: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"
-                    />
-                  </div>
+                  <h3 className="font-extrabold text-base uppercase tracking-wider text-white flex items-center gap-2">
+                    <Palette className="w-5 h-5 text-rose-500" />
+                    <span>Presets de Cores & Identidade Visual</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Alterne instantaneamente entre temas pré-calibrados de alta conversão ou refine cores manualmente com segurança.
+                  </p>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">
-                    Cor Secundária (Botões e Destaques)
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={cmsForm.secondaryColor}
-                      onChange={(e) => setCmsForm({ ...cmsForm, secondaryColor: e.target.value })}
-                      className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={cmsForm.secondaryColor}
-                      onChange={(e) => setCmsForm({ ...cmsForm, secondaryColor: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"
-                    />
-                  </div>
+                
+                {/* Active Preset Pill */}
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-800 border border-slate-700 text-slate-300">
+                  <span className="w-2 h-2 rounded-full animate-ping bg-rose-500" />
+                  <span>
+                    Preset Ativo:{" "}
+                    <strong className="text-white">
+                      {cmsForm.activePreset === "dark-fitness"
+                        ? "Dark Fitness (Escuro)"
+                        : cmsForm.activePreset === "clean-active"
+                        ? "Clean Active (Claro)"
+                        : cmsForm.activePreset === "dark-neon"
+                        ? "Dark Neon Sport"
+                        : cmsForm.activePreset === "clean-rose"
+                        ? "Clean Rose Active"
+                        : "Personalizado (Custom)"}
+                    </strong>
+                  </span>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">
-                    Cor de Realce (Badges e Sucesso)
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={cmsForm.accentColor}
-                      onChange={(e) => setCmsForm({ ...cmsForm, accentColor: e.target.value })}
-                      className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={cmsForm.accentColor}
-                      onChange={(e) => setCmsForm({ ...cmsForm, accentColor: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"
-                    />
+              {/* 1. PRESETS CARDS GRID */}
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-300 mb-3 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>Escolha um Preset Pré-Definido (1 Clique)</span>
+                </label>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Preset 1: Dark Fitness */}
+                  <div
+                    className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col justify-between ${
+                      cmsForm.activePreset === "dark-fitness"
+                        ? "bg-slate-800/90 border-rose-500/80 ring-2 ring-rose-500/30"
+                        : "bg-slate-950/60 border-slate-800 hover:border-slate-700"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-extrabold text-sm text-white flex items-center gap-1.5">
+                          <Moon className="w-4 h-4 text-indigo-400" />
+                          <span>Dark Fitness (Padrão Escuro)</span>
+                        </span>
+                        {cmsForm.activePreset === "dark-fitness" && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                            Ativo
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 mb-3">
+                        Slate escuro (#0F172A), cards (#1E293B), texto claro (#F8FAFC) e botões vibrantes em rosa/vinho (#E11D48).
+                      </p>
+                      {/* Swatches */}
+                      <div className="flex items-center gap-1.5 mb-4">
+                        <span className="w-5 h-5 rounded-md border border-white/20 shadow-sm" style={{ backgroundColor: "#0F172A" }} title="Fundo: #0F172A" />
+                        <span className="w-5 h-5 rounded-md border border-white/20 shadow-sm" style={{ backgroundColor: "#1E293B" }} title="Card: #1E293B" />
+                        <span className="w-5 h-5 rounded-md border border-white/20 shadow-sm" style={{ backgroundColor: "#F8FAFC" }} title="Texto: #F8FAFC" />
+                        <span className="w-5 h-5 rounded-md border border-white/20 shadow-sm" style={{ backgroundColor: "#E11D48" }} title="Botão: #E11D48" />
+                        <span className="w-5 h-5 rounded-md border border-white/20 shadow-sm" style={{ backgroundColor: "#10B981" }} title="Acento: #10B981" />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset(THEME_PRESETS["dark-fitness"])}
+                      className="w-full py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 flex items-center justify-center gap-2 transition active:scale-95"
+                    >
+                      <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Aplicar Tema Escuro</span>
+                    </button>
+                  </div>
+
+                  {/* Preset 2: Clean Active */}
+                  <div
+                    className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col justify-between ${
+                      cmsForm.activePreset === "clean-active"
+                        ? "bg-slate-800/90 border-cyan-500/80 ring-2 ring-cyan-500/30"
+                        : "bg-slate-950/60 border-slate-800 hover:border-slate-700"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-extrabold text-sm text-white flex items-center gap-1.5">
+                          <Sun className="w-4 h-4 text-amber-400" />
+                          <span>Clean Active (Padrão Claro)</span>
+                        </span>
+                        {cmsForm.activePreset === "clean-active" && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                            Ativo
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 mb-3">
+                        Fundo cinza claro esportivo (#F8FAFC), cards brancos (#FFFFFF), texto escuro (#0F172A) e botões em azul (#0284C7).
+                      </p>
+                      {/* Swatches */}
+                      <div className="flex items-center gap-1.5 mb-4">
+                        <span className="w-5 h-5 rounded-md border border-slate-600 shadow-sm" style={{ backgroundColor: "#F8FAFC" }} title="Fundo: #F8FAFC" />
+                        <span className="w-5 h-5 rounded-md border border-slate-600 shadow-sm" style={{ backgroundColor: "#FFFFFF" }} title="Card: #FFFFFF" />
+                        <span className="w-5 h-5 rounded-md border border-slate-600 shadow-sm" style={{ backgroundColor: "#0F172A" }} title="Texto: #0F172A" />
+                        <span className="w-5 h-5 rounded-md border border-slate-600 shadow-sm" style={{ backgroundColor: "#0284C7" }} title="Botão: #0284C7" />
+                        <span className="w-5 h-5 rounded-md border border-slate-600 shadow-sm" style={{ backgroundColor: "#E11D48" }} title="Acento: #E11D48" />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset(THEME_PRESETS["clean-active"])}
+                      className="w-full py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 flex items-center justify-center gap-2 transition active:scale-95"
+                    >
+                      <Sun className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Aplicar Tema Claro</span>
+                    </button>
+                  </div>
+
+                  {/* Preset 3: Dark Neon Sport */}
+                  <div
+                    className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col justify-between ${
+                      cmsForm.activePreset === "dark-neon"
+                        ? "bg-slate-800/90 border-emerald-500/80 ring-2 ring-emerald-500/30"
+                        : "bg-slate-950/60 border-slate-800 hover:border-slate-700"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-extrabold text-sm text-white flex items-center gap-1.5">
+                          <Flame className="w-4 h-4 text-emerald-400" />
+                          <span>Dark Neon Sport</span>
+                        </span>
+                        {cmsForm.activePreset === "dark-neon" && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                            Ativo
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 mb-3">
+                        Preto profundo com botões em Verde Neon (#10B981) para máxima energia atlética.
+                      </p>
+                      <div className="flex items-center gap-1.5 mb-4">
+                        <span className="w-5 h-5 rounded-md border border-white/20 shadow-sm" style={{ backgroundColor: "#090D16" }} />
+                        <span className="w-5 h-5 rounded-md border border-white/20 shadow-sm" style={{ backgroundColor: "#131C2E" }} />
+                        <span className="w-5 h-5 rounded-md border border-white/20 shadow-sm" style={{ backgroundColor: "#F8FAFC" }} />
+                        <span className="w-5 h-5 rounded-md border border-white/20 shadow-sm" style={{ backgroundColor: "#10B981" }} />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset(THEME_PRESETS["dark-neon"])}
+                      className="w-full py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 flex items-center justify-center gap-2 transition active:scale-95"
+                    >
+                      <Flame className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Aplicar Neon Sport</span>
+                    </button>
+                  </div>
+
+                  {/* Preset 4: Clean Rose Active */}
+                  <div
+                    className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col justify-between ${
+                      cmsForm.activePreset === "clean-rose"
+                        ? "bg-slate-800/90 border-rose-500/80 ring-2 ring-rose-500/30"
+                        : "bg-slate-950/60 border-slate-800 hover:border-slate-700"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-extrabold text-sm text-white flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-rose-400" />
+                          <span>Clean Rose Active</span>
+                        </span>
+                        {cmsForm.activePreset === "clean-rose" && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                            Ativo
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 mb-3">
+                        Fundo claro suave com botões em Rose/Magenta (#E11D48) e detalhes atléticos.
+                      </p>
+                      <div className="flex items-center gap-1.5 mb-4">
+                        <span className="w-5 h-5 rounded-md border border-slate-600 shadow-sm" style={{ backgroundColor: "#F8FAFC" }} />
+                        <span className="w-5 h-5 rounded-md border border-slate-600 shadow-sm" style={{ backgroundColor: "#FFFFFF" }} />
+                        <span className="w-5 h-5 rounded-md border border-slate-600 shadow-sm" style={{ backgroundColor: "#0F172A" }} />
+                        <span className="w-5 h-5 rounded-md border border-slate-600 shadow-sm" style={{ backgroundColor: "#E11D48" }} />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset(THEME_PRESETS["clean-rose"])}
+                      className="w-full py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 flex items-center justify-center gap-2 transition active:scale-95"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Aplicar Rose Claro</span>
+                    </button>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">
-                    Nome da Marca
-                  </label>
-                  <input
-                    type="text"
-                    value={cmsForm.brandName}
-                    onChange={(e) => setCmsForm({ ...cmsForm, brandName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
-                  />
+              {/* 2. RECOVERY MODE (SAFETY BUTTON) */}
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-extrabold text-xs uppercase tracking-wider text-amber-300">
+                      Modo de Recuperação e Segurança Visual
+                    </h4>
+                    <p className="text-xs text-amber-200/70 mt-0.5">
+                      Fez alterações manuais e perdeu o contraste ideal? Restaure a qualquer momento a paleta oficial de fábrica com 1 clique.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1">
-                    Slogan da Loja
-                  </label>
-                  <input
-                    type="text"
-                    value={cmsForm.brandTagline}
-                    onChange={(e) => setCmsForm({ ...cmsForm, brandTagline: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
-                  />
+                <button
+                  type="button"
+                  onClick={handleRestoreFactoryColors}
+                  className="px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex items-center gap-2 shrink-0 transition active:scale-95"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Restaurar Cores de Fábrica</span>
+                </button>
+              </div>
+
+              {/* 3. LIVE THEME PREVIEW CARD */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                    <Monitor className="w-4 h-4 text-rose-500" />
+                    <span>Pré-visualização Dinâmica do Tema</span>
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    Atualiza em tempo real enquanto você ajusta
+                  </span>
+                </div>
+
+                <div
+                  className="p-5 rounded-2xl border transition-all duration-300 flex flex-col md:flex-row items-center gap-6"
+                  style={{
+                    backgroundColor: cmsForm.backgroundColor || "#0F172A",
+                    borderColor: "rgba(148, 163, 184, 0.2)",
+                  }}
+                >
+                  {/* Mini Card Preview */}
+                  <div
+                    className="w-full md:w-64 p-4 rounded-xl border shadow-lg space-y-3"
+                    style={{
+                      backgroundColor: cmsForm.cardColor || "#1E293B",
+                      borderColor: "rgba(148, 163, 184, 0.2)",
+                      color: cmsForm.textColor || "#F8FAFC",
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider text-white"
+                        style={{ backgroundColor: cmsForm.accentColor || "#10B981" }}
+                      >
+                        LANÇAMENTO
+                      </span>
+                      <span className="text-xs font-bold text-amber-400">★ 4.9</span>
+                    </div>
+
+                    <div>
+                      <h5
+                        className="font-extrabold text-xs line-clamp-1"
+                        style={{ color: cmsForm.textColor || "#F8FAFC" }}
+                      >
+                        Legging Emana® Zero Transparência
+                      </h5>
+                      <span
+                        className="text-sm font-black mt-1 block"
+                        style={{ color: cmsForm.textColor || "#F8FAFC" }}
+                      >
+                        R$ 149,90
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="w-full py-2 rounded-lg font-black text-xs uppercase tracking-wider shadow transition"
+                      style={{
+                        backgroundColor: cmsForm.secondaryColor || "#E11D48",
+                        color: cmsForm.buttonTextColor || "#FFFFFF",
+                      }}
+                    >
+                      Comprar Agora
+                    </button>
+                  </div>
+
+                  {/* Context explanation */}
+                  <div className="flex-1 space-y-1.5 text-xs" style={{ color: cmsForm.textColor || "#F8FAFC" }}>
+                    <div className="font-extrabold text-sm uppercase">
+                      Como os visitantes verão sua loja:
+                    </div>
+                    <p className="opacity-80 leading-relaxed text-xs">
+                      O fundo adota <strong>{cmsForm.backgroundColor}</strong>, os cartões de produtos utilizam <strong>{cmsForm.cardColor}</strong>, o texto principal é <strong>{cmsForm.textColor}</strong> e os botões chamam atenção com <strong>{cmsForm.secondaryColor}</strong> (texto <strong>{cmsForm.buttonTextColor}</strong>).
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. MANUAL COLOR PICKERS (AJUSTE FINO) */}
+              <div className="pt-2">
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-300 mb-3 flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-rose-500" />
+                  <span>Ajuste Fino de Cores Individuais</span>
+                </label>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Background Color */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">
+                      1. Fundo do Site (Background)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={cmsForm.backgroundColor || "#0f172a"}
+                        onChange={(e) => handleCustomColorChange("backgroundColor", e.target.value)}
+                        className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={cmsForm.backgroundColor || "#0f172a"}
+                        onChange={(e) => handleCustomColorChange("backgroundColor", e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Card Color */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">
+                      2. Superfície dos Cards (Card/Surface)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={cmsForm.cardColor || "#1e293b"}
+                        onChange={(e) => handleCustomColorChange("cardColor", e.target.value)}
+                        className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={cmsForm.cardColor || "#1e293b"}
+                        onChange={(e) => handleCustomColorChange("cardColor", e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Text Color */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">
+                      3. Texto Principal (Primary Text)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={cmsForm.textColor || "#f8fafc"}
+                        onChange={(e) => handleCustomColorChange("textColor", e.target.value)}
+                        className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={cmsForm.textColor || "#f8fafc"}
+                        onChange={(e) => handleCustomColorChange("textColor", e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Secondary / Button Color */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">
+                      4. Destaque / Botões Principais (Action)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={cmsForm.secondaryColor || "#e11d48"}
+                        onChange={(e) => handleCustomColorChange("secondaryColor", e.target.value)}
+                        className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={cmsForm.secondaryColor || "#e11d48"}
+                        onChange={(e) => handleCustomColorChange("secondaryColor", e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Button Text Color */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">
+                      5. Texto em Botões (Button Text)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={cmsForm.buttonTextColor || "#ffffff"}
+                        onChange={(e) => handleCustomColorChange("buttonTextColor", e.target.value)}
+                        className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={cmsForm.buttonTextColor || "#ffffff"}
+                        onChange={(e) => handleCustomColorChange("buttonTextColor", e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Accent Color */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">
+                      6. Realce / Badges & Sucesso (Accent)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={cmsForm.accentColor || "#10b981"}
+                        onChange={(e) => handleCustomColorChange("accentColor", e.target.value)}
+                        className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={cmsForm.accentColor || "#10b981"}
+                        onChange={(e) => handleCustomColorChange("accentColor", e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Primary Color (Brand / Navbar Top) */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">
+                      7. Cor da Barra / Marca (Primary)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={cmsForm.primaryColor || "#0f172a"}
+                        onChange={(e) => handleCustomColorChange("primaryColor", e.target.value)}
+                        className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={cmsForm.primaryColor || "#0f172a"}
+                        onChange={(e) => handleCustomColorChange("primaryColor", e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. BRAND INFO */}
+              <div className="pt-4 border-t border-slate-800">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-300 mb-3">
+                  Informações da Marca & Identidade
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">
+                      Nome da Marca
+                    </label>
+                    <input
+                      type="text"
+                      value={cmsForm.brandName}
+                      onChange={(e) => setCmsForm({ ...cmsForm, brandName: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">
+                      Slogan da Loja
+                    </label>
+                    <input
+                      type="text"
+                      value={cmsForm.brandTagline}
+                      onChange={(e) => setCmsForm({ ...cmsForm, brandTagline: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

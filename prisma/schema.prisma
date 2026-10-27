@@ -112,8 +112,13 @@ model CmsSettings {
   brandTagline          String   @default("Moda Fitness de Alta Performance")
   logoUrl               String?
   primaryColor          String   @default("#0f172a") // Slate-900 / Dark Luxury Athletic
-  secondaryColor        String   @default("#f43f5e") // Rose-500 Vibrant Fitness
+  secondaryColor        String   @default("#e11d48") // Rose-500 Vibrant Fitness / Acento
   accentColor           String   @default("#10b981") // Emerald-500
+  backgroundColor       String   @default("#0f172a") // Fundo global do site
+  cardColor             String   @default("#1e293b") // Fundo de cards e superfícies
+  textColor             String   @default("#f8fafc") // Texto primário
+  buttonTextColor       String   @default("#ffffff") // Texto em botões
+  activePreset          String   @default("dark-fitness") // Identificador do preset ativo
   topBarText            String   @default("🔥 FRETE GRÁTIS EM COMPRAS ACIMA DE R$ 199 | 10% OFF COM CUPOM: JV10")
   topBarActive          Boolean  @default(true)
   heroTitle             String   @default("SUPERE SEUS LIMITES COM ESTILO & CONFORTO")

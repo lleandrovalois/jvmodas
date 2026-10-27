@@ -31,7 +31,15 @@ export function FeaturesBar() {
   ];
 
   return (
-    <section className="w-full bg-slate-900 text-white border-y border-slate-800 py-6">
+    <section
+      className="w-full py-6 transition-colors duration-300"
+      style={{
+        backgroundColor: "var(--card-bg)",
+        color: "var(--text-primary)",
+        borderTop: "1px solid rgba(148, 163, 184, 0.15)",
+        borderBottom: "1px solid rgba(148, 163, 184, 0.15)",
+      }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {features.map((feat, index) => {
@@ -48,7 +56,10 @@ export function FeaturesBar() {
                   />
                 </div>
                 <div>
-                  <h4 className="text-sm font-extrabold text-white tracking-tight">
+                  <h4
+                    className="text-sm font-extrabold tracking-tight"
+                    style={{ color: "var(--text-primary)" }}
+                  >
                     {feat.title}
                   </h4>
                   <p className="text-xs text-slate-400 font-medium">
