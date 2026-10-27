@@ -158,6 +158,11 @@ export async function createMercadoPagoPreference({
       items: preferenceItems,
       payer: payerData,
       statement_descriptor: "JVMODAS",
+      payment_methods: {
+        excluded_payment_types: [
+          { id: "ticket" },
+        ],
+      },
     };
 
     if (backUrls) {

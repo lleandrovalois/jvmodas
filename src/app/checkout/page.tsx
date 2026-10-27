@@ -80,6 +80,7 @@ export default function CheckoutPage() {
     preferenceId: string;
     initPoint: string;
     publicKey: string;
+    total: number;
   } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -252,12 +253,15 @@ export default function CheckoutPage() {
         throw new Error(data.error || "Erro ao processar checkout.");
       }
 
+      const finalOrderTotal = Number(data.total) || Number(total) || 0;
+
       // Save order details to state
       setCreatedOrder({
         orderId: data.orderId,
         preferenceId: data.preferenceId,
         initPoint: data.initPoint,
         publicKey: data.publicKey,
+        total: finalOrderTotal,
       });
 
       // Clear local cart
@@ -693,35 +697,31 @@ export default function CheckoutPage() {
                         Checkout Pro 100% Protegido
                       </h4>
                       <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
-                        Ao clicar em <strong>CONCLUIR PEDIDO</strong>, abrirá a janela oficial do Mercado Pago para você escolher livremente entre:
+                        Ao clicar em <strong>CONCLUIR PEDIDO</strong>, abrirá a janela oficial do Mercado Pago para você pagar via:
                       </p>
                     </div>
                   </div>
 
-                  {/* Payment Options Supported within Mercado Pago */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-700/80 text-center space-y-1">
-                      <QrCode className="w-5 h-5 text-emerald-500 mx-auto" />
-                      <div className="text-[11px] font-black text-slate-800 dark:text-slate-200">PIX</div>
-                      <div className="text-[9px] text-emerald-600 font-bold">Aprovação 24h</div>
+                  {/* Payment Options Supported within Mercado Pago (PIX e Mercado Pago) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-700/80 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 border border-emerald-500/20">
+                        <QrCode className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-slate-800 dark:text-slate-200">PIX Instantâneo</div>
+                        <div className="text-[11px] text-emerald-600 font-bold">Aprovação imediata 24h</div>
+                      </div>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-700/80 text-center space-y-1">
-                      <CreditCard className="w-5 h-5 text-rose-500 mx-auto" />
-                      <div className="text-[11px] font-black text-slate-800 dark:text-slate-200">Cartão</div>
-                      <div className="text-[9px] text-slate-500">Até 12x</div>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-700/80 text-center space-y-1">
-                      <Wallet className="w-5 h-5 text-sky-500 mx-auto" />
-                      <div className="text-[11px] font-black text-slate-800 dark:text-slate-200">Saldo MP</div>
-                      <div className="text-[9px] text-slate-500">Em 1 Clique</div>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-700/80 text-center space-y-1">
-                      <Tag className="w-5 h-5 text-amber-500 mx-auto" />
-                      <div className="text-[11px] font-black text-slate-800 dark:text-slate-200">Boleto</div>
-                      <div className="text-[9px] text-slate-500">Bancário</div>
+                    <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-700/80 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center shrink-0 border border-sky-500/20">
+                        <Wallet className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-slate-800 dark:text-slate-200">Conta Mercado Pago</div>
+                        <div className="text-[11px] text-sky-600 font-bold">Saldo ou parcelamento MP</div>
+                      </div>
                     </div>
                   </div>
 
@@ -906,7 +906,7 @@ export default function CheckoutPage() {
           preferenceId={createdOrder.preferenceId}
           initPoint={createdOrder.initPoint}
           publicKey={createdOrder.publicKey}
-          total={total}
+          total={createdOrder.total > 0 ? createdOrder.total : total}
           customer={customer}
         />
       )}

@@ -64,6 +64,7 @@ export function MercadoPagoModal({
   const { cms } = useCms();
 
   // Lifecycle & payment states
+  const [orderAmount, setOrderAmount] = useState<number>(total > 0 ? total : 0);
   const [loadingBrick, setLoadingBrick] = useState(true);
   const [brickError, setBrickError] = useState<string | null>(null);
   const [paymentState, setPaymentState] = useState<"form" | "pix_pending" | "approved">("form");
@@ -71,6 +72,13 @@ export function MercadoPagoModal({
   const [copiedPix, setCopiedPix] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(900); // 15 mins for PIX
+
+  // Sync total prop when changed to positive value
+  useEffect(() => {
+    if (total > 0) {
+      setOrderAmount(total);
+    }
+  }, [total]);
 
   // References
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -160,6 +168,32 @@ export function MercadoPagoModal({
           container.innerHTML = "";
         }
 
+        // Resolve valid order amount and preferenceId (fallback to order endpoint if needed)
+        let validAmount = orderAmount > 0 ? orderAmount : (total > 0 ? total : 0);
+        let effectivePrefId = preferenceId;
+
+        if ((validAmount <= 0 || !effectivePrefId) && orderId) {
+          try {
+            const res = await fetch(`/api/orders/${orderId}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data?.total && Number(data.total) > 0) {
+                validAmount = Number(data.total);
+                setOrderAmount(validAmount);
+              }
+              if (data?.preferenceId) {
+                effectivePrefId = data.preferenceId;
+              }
+            }
+          } catch (e) {
+            console.warn("Could not fetch order details:", e);
+          }
+        }
+
+        if (validAmount <= 0) {
+          throw new Error("Valor do pedido inválido ou não informado. Recarregue a página.");
+        }
+
         const mp = new window.MercadoPago(publicKey, {
           locale: "pt-BR",
         });
@@ -174,8 +208,8 @@ export function MercadoPagoModal({
 
         const settings = {
           initialization: {
-            amount: Number(total.toFixed(2)),
-            preferenceId: preferenceId || undefined,
+            amount: Number(validAmount.toFixed(2)),
+            preferenceId: effectivePrefId || undefined,
             payer: {
               email: customer.email,
               firstName,
@@ -189,11 +223,7 @@ export function MercadoPagoModal({
           customization: {
             paymentMethods: {
               bankTransfer: "all", // PIX
-              creditCard: "all",
-              debitCard: "all",
-              ticket: "all", // Boleto
-              mercadoPago: "all",
-              maxInstallments: 12,
+              mercadoPago: "all",  // Conta Mercado Pago
             },
             visual: {
               style: {
@@ -415,7 +445,7 @@ export function MercadoPagoModal({
                 className="font-black text-sm sm:text-base leading-none"
                 style={{ color: cms.secondaryColor || "#e11d48" }}
               >
-                R$ {total.toFixed(2).replace(".", ",")}
+                R$ {(orderAmount > 0 ? orderAmount : total).toFixed(2).replace(".", ",")}
               </div>
             </div>
 
