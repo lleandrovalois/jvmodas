@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
@@ -21,8 +21,11 @@ import {
   Loader2,
   Sparkles,
   Wallet,
+  MapPin,
+  Store,
 } from "lucide-react";
 import { MercadoPagoModal } from "@/components/MercadoPagoModal";
+import { calculateShippingOptions, getRegionByState } from "@/lib/shipping";
 
 declare global {
   interface Window {
@@ -83,22 +86,31 @@ export default function CheckoutPage() {
   const threshold = cms.freeShippingThreshold || 199.0;
   const isFreeShipping = subtotal >= threshold;
 
-  // Set default shipping method
+  const shippingOptions = useMemo(() => {
+    return calculateShippingOptions(shipping.state, subtotal, threshold);
+  }, [shipping.state, subtotal, threshold]);
+
+  // Synchronize shipping price whenever state, subtotal or method changes
   useEffect(() => {
-    if (isFreeShipping) {
-      setShipping((prev) => ({
-        ...prev,
-        method: "Frete Grátis",
-        price: 0.0,
-      }));
-    } else {
-      setShipping((prev) => ({
-        ...prev,
-        method: prev.method === "Frete Grátis" ? "PAC" : prev.method,
-        price: prev.method === "SEDEX" ? 26.5 : 14.9,
-      }));
-    }
-  }, [subtotal, isFreeShipping]);
+    setShipping((prev) => {
+      if (prev.method === "Retirada no Local") {
+        return { ...prev, price: 0.0 };
+      }
+
+      if (isFreeShipping && (prev.method === "PAC" || prev.method === "Frete Grátis")) {
+        return { ...prev, method: "Frete Grátis", price: 0.0 };
+      }
+
+      const matched = shippingOptions.find((opt) => opt.method === prev.method);
+      if (matched) {
+        return { ...prev, price: matched.price };
+      }
+
+      // Default to first option
+      const defaultOpt = shippingOptions[0];
+      return { ...prev, method: defaultOpt.method, price: defaultOpt.price };
+    });
+  }, [shippingOptions, isFreeShipping]);
 
   // Mask inputs
   const formatCPF = (val: string) => {
@@ -202,9 +214,22 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!shipping.cep || !shipping.street || !shipping.number || !shipping.city || !shipping.state) {
-      setSubmitError("Por favor, preencha todos os dados de entrega.");
-      return;
+    const isPickup = shipping.method === "Retirada no Local";
+    const finalShipping = {
+      ...shipping,
+      cep: isPickup && !shipping.cep ? "01001-000" : shipping.cep,
+      street: isPickup && !shipping.street ? "Showroom JVMODAS - Retirada Presencial" : shipping.street,
+      number: isPickup && !shipping.number ? "Balcão" : shipping.number,
+      neighborhood: isPickup && !shipping.neighborhood ? "Centro" : shipping.neighborhood,
+      city: isPickup && !shipping.city ? "São Paulo" : shipping.city,
+      state: isPickup && !shipping.state ? "SP" : shipping.state,
+    };
+
+    if (!isPickup) {
+      if (!finalShipping.cep || !finalShipping.street || !finalShipping.number || !finalShipping.city || !finalShipping.state) {
+        setSubmitError("Por favor, preencha todos os dados de entrega.");
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -215,7 +240,7 @@ export default function CheckoutPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customer,
-          shipping,
+          shipping: finalShipping,
           items: cart,
           couponCode,
         }),
@@ -426,15 +451,24 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="space-y-4">
+                  {shipping.method === "Retirada no Local" && (
+                    <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 text-xs text-sky-800 dark:text-sky-200 flex items-center gap-2.5">
+                      <Store className="w-4 h-4 text-sky-500 shrink-0" />
+                      <span>
+                        <strong>Retirada no Showroom selecionada.</strong> O preenchimento do endereço residencial abaixo é opcional.
+                      </span>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                        CEP *
+                        CEP {shipping.method === "Retirada no Local" ? "(Opcional)" : "*"}
                       </label>
                       <div className="relative">
                         <input
                           type="text"
-                          required
+                          required={shipping.method !== "Retirada no Local"}
                           value={shipping.cep}
                           onChange={(e) => setShipping({ ...shipping, cep: formatCEP(e.target.value) })}
                           onBlur={handleCepBlur}
@@ -452,11 +486,11 @@ export default function CheckoutPage() {
 
                     <div>
                       <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                        Bairro *
+                        Bairro {shipping.method === "Retirada no Local" ? "(Opcional)" : "*"}
                       </label>
                       <input
                         type="text"
-                        required
+                        required={shipping.method !== "Retirada no Local"}
                         value={shipping.neighborhood}
                         onChange={(e) => setShipping({ ...shipping, neighborhood: e.target.value })}
                         placeholder="Bairro"
@@ -468,11 +502,11 @@ export default function CheckoutPage() {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="col-span-2">
                       <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                        Rua / Avenida *
+                        Rua / Avenida {shipping.method === "Retirada no Local" ? "(Opcional)" : "*"}
                       </label>
                       <input
                         type="text"
-                        required
+                        required={shipping.method !== "Retirada no Local"}
                         value={shipping.street}
                         onChange={(e) => setShipping({ ...shipping, street: e.target.value })}
                         placeholder="Nome da sua rua"
@@ -482,11 +516,11 @@ export default function CheckoutPage() {
 
                     <div>
                       <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                        Número *
+                        Número {shipping.method === "Retirada no Local" ? "(Opcional)" : "*"}
                       </label>
                       <input
                         type="text"
-                        required
+                        required={shipping.method !== "Retirada no Local"}
                         value={shipping.number}
                         onChange={(e) => setShipping({ ...shipping, number: e.target.value })}
                         placeholder="123"
@@ -511,11 +545,11 @@ export default function CheckoutPage() {
 
                     <div>
                       <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                        Cidade *
+                        Cidade {shipping.method === "Retirada no Local" ? "(Opcional)" : "*"}
                       </label>
                       <input
                         type="text"
-                        required
+                        required={shipping.method !== "Retirada no Local"}
                         value={shipping.city}
                         onChange={(e) => setShipping({ ...shipping, city: e.target.value })}
                         placeholder="Cidade"
@@ -525,12 +559,12 @@ export default function CheckoutPage() {
 
                     <div>
                       <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                        Estado (UF) *
+                        Estado (UF) {shipping.method === "Retirada no Local" ? "(Opcional)" : "*"}
                       </label>
                       <input
                         type="text"
                         maxLength={2}
-                        required
+                        required={shipping.method !== "Retirada no Local"}
                         value={shipping.state}
                         onChange={(e) => setShipping({ ...shipping, state: e.target.value.toUpperCase() })}
                         placeholder="SP"
@@ -540,89 +574,100 @@ export default function CheckoutPage() {
                   </div>
 
                   {/* SHIPPING OPTIONS */}
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Opção de Envio:
-                    </span>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {isFreeShipping ? (
-                        <label
-                          className={`p-3.5 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition ${
-                            shipping.method === "Frete Grátis"
-                              ? "border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20"
-                              : "border-slate-200 dark:border-slate-800"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <input
-                              type="radio"
-                              name="shipping"
-                              checked={shipping.method === "Frete Grátis"}
-                              onChange={() => setShipping({ ...shipping, method: "Frete Grátis", price: 0 })}
-                              className="text-emerald-600 focus:ring-emerald-500"
-                            />
-                            <div>
-                              <div className="text-xs font-black text-slate-900 dark:text-white">
-                                Frete Grátis (Promocional)
-                              </div>
-                              <div className="text-[11px] text-slate-500">4 a 7 dias úteis</div>
-                            </div>
-                          </div>
-                          <span className="text-xs font-black text-emerald-600">GRÁTIS</span>
-                        </label>
+                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-1">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Opção de Entrega / Frete:
+                      </span>
+                      {shipping.state ? (
+                        <span className="text-[10px] font-black uppercase tracking-wider text-rose-500 bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/20">
+                          {getRegionByState(shipping.state).regionName} ({shipping.state.toUpperCase()})
+                        </span>
                       ) : (
-                        <label
-                          className={`p-3.5 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition ${
-                            shipping.method === "PAC"
-                              ? "border-rose-500 bg-rose-50/30 dark:bg-rose-950/20"
-                              : "border-slate-200 dark:border-slate-800"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <input
-                              type="radio"
-                              name="shipping"
-                              checked={shipping.method === "PAC"}
-                              onChange={() => setShipping({ ...shipping, method: "PAC", price: 14.9 })}
-                              className="text-rose-600 focus:ring-rose-500"
-                            />
-                            <div>
-                              <div className="text-xs font-black text-slate-900 dark:text-white">
-                                PAC Econômico
-                              </div>
-                              <div className="text-[11px] text-slate-500">5 a 8 dias úteis</div>
-                            </div>
-                          </div>
-                          <span className="text-xs font-black">R$ 14,90</span>
-                        </label>
+                        <span className="text-[10px] text-slate-400">
+                          (Digite o CEP para ver valores exatos por Estado)
+                        </span>
                       )}
-
-                      <label
-                        className={`p-3.5 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition ${
-                          shipping.method === "SEDEX"
-                            ? "border-rose-500 bg-rose-50/30 dark:bg-rose-950/20"
-                            : "border-slate-200 dark:border-slate-800"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <input
-                            type="radio"
-                            name="shipping"
-                            checked={shipping.method === "SEDEX"}
-                            onChange={() => setShipping({ ...shipping, method: "SEDEX", price: 26.5 })}
-                            className="text-rose-600 focus:ring-rose-500"
-                          />
-                          <div>
-                            <div className="text-xs font-black text-slate-900 dark:text-white">
-                              SEDEX Expresso
-                            </div>
-                            <div className="text-[11px] text-slate-500">1 a 3 dias úteis</div>
-                          </div>
-                        </div>
-                        <span className="text-xs font-black">R$ 26,50</span>
-                      </label>
                     </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {shippingOptions.map((opt) => {
+                        const isSelected = shipping.method === opt.method;
+                        const isPickup = opt.id === "RETIRADA";
+                        const isFree = opt.price === 0;
+
+                        return (
+                          <label
+                            key={opt.id}
+                            className={`p-3.5 rounded-2xl border-2 flex flex-col justify-between cursor-pointer transition relative ${
+                              isSelected
+                                ? isPickup
+                                  ? "border-sky-500 bg-sky-50/40 dark:bg-sky-950/20 shadow-sm"
+                                  : isFree
+                                  ? "border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-sm"
+                                  : "border-rose-500 bg-rose-50/30 dark:bg-rose-950/20 shadow-sm"
+                                : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                            }`}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <input
+                                type="radio"
+                                name="shipping"
+                                checked={isSelected}
+                                onChange={() =>
+                                  setShipping((prev) => ({
+                                    ...prev,
+                                    method: opt.method,
+                                    price: opt.price,
+                                  }))
+                                }
+                                className={`mt-0.5 ${
+                                  isPickup
+                                    ? "text-sky-600 focus:ring-sky-500"
+                                    : isFree
+                                    ? "text-emerald-600 focus:ring-emerald-500"
+                                    : "text-rose-600 focus:ring-rose-500"
+                                }`}
+                              />
+                              <div className="space-y-0.5">
+                                <div className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+                                  <span>{opt.name}</span>
+                                </div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                  {opt.subtitle}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                              <span className="text-[10px] text-slate-400">Custo:</span>
+                              <span
+                                className={`text-xs font-black ${
+                                  isFree
+                                    ? "text-emerald-600 dark:text-emerald-400"
+                                    : "text-slate-900 dark:text-white"
+                                }`}
+                              >
+                                {isFree ? (isPickup ? "SEM CUSTOS" : "GRÁTIS") : `R$ ${opt.price.toFixed(2).replace(".", ",")}`}
+                              </span>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    {/* Notice if Retirada no Local is selected */}
+                    {shipping.method === "Retirada no Local" && (
+                      <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 text-xs text-sky-800 dark:text-sky-200 flex items-start gap-2.5 animate-fadeIn">
+                        <Store className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
+                        <div>
+                          <strong>Retirada Presencial no Showroom:</strong>
+                          <p className="text-[11px] text-sky-700 dark:text-sky-300 mt-0.5">
+                            Showroom JVMODAS (São Paulo - SP). Assim que seu pagamento for confirmado, suas peças serão separadas e avisaremos via WhatsApp quando o pacote estiver liberado para retirada no balcão sem nenhum custo!
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

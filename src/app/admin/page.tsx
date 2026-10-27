@@ -1910,6 +1910,10 @@ export default function AdminPage() {
                             <span className="font-mono text-cyan-400 font-bold">
                               {ord.trackingCode}
                             </span>
+                          ) : ord.shippingMethod === "Retirada no Local" ? (
+                            <span className="text-emerald-400 font-medium text-[11px] bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                              Retirada Local
+                            </span>
                           ) : (
                             <span className="text-slate-600">Não informado</span>
                           )}
@@ -2281,18 +2285,32 @@ export default function AdminPage() {
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-800 space-y-1">
-                <div className="font-black text-white uppercase text-[11px] mb-2">
-                  Endereço de Entrega
+                <div className="font-black text-white uppercase text-[11px] mb-2 flex items-center justify-between">
+                  <span>{selectedOrder.shippingMethod === "Retirada no Local" ? "Modalidade de Entrega" : "Endereço de Entrega"}</span>
+                  {selectedOrder.shippingMethod === "Retirada no Local" && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                      RETIRADA LOCAL
+                    </span>
+                  )}
                 </div>
-                <div className="text-slate-300">
-                  {selectedOrder.shippingStreet}, {selectedOrder.shippingNumber}
-                </div>
-                <div className="text-slate-400">
-                  {selectedOrder.shippingNeighborhood} - {selectedOrder.shippingCity}/
-                  {selectedOrder.shippingState}
-                </div>
-                <div className="text-slate-400">CEP: {selectedOrder.shippingCep}</div>
-                <div className="text-cyan-400 font-bold mt-1">
+                {selectedOrder.shippingMethod === "Retirada no Local" ? (
+                  <div className="text-slate-300 text-xs space-y-1">
+                    <p className="font-bold text-emerald-400">Retirada Presencial no Showroom (SP)</p>
+                    <p className="text-slate-400 text-[11px]">Cliente retira pessoalmente no balcão sem custos de frete.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-slate-300">
+                      {selectedOrder.shippingStreet}, {selectedOrder.shippingNumber}
+                    </div>
+                    <div className="text-slate-400">
+                      {selectedOrder.shippingNeighborhood} - {selectedOrder.shippingCity}/
+                      {selectedOrder.shippingState}
+                    </div>
+                    <div className="text-slate-400">CEP: {selectedOrder.shippingCep}</div>
+                  </>
+                )}
+                <div className="text-cyan-400 font-bold mt-1 text-xs">
                   Envio: {selectedOrder.shippingMethod}
                 </div>
               </div>

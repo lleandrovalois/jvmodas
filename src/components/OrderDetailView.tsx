@@ -198,13 +198,22 @@ export function OrderDetailView({
     currentStep = 1;
   }
 
-  const timelineSteps = [
-    { step: 1, title: "Pedido Realizado", desc: "Registrado com sucesso" },
-    { step: 2, title: "Pagamento Confirmado", desc: "Aprovado via Mercado Pago" },
-    { step: 3, title: "Em Separação", desc: "Conferência e embalagem" },
-    { step: 4, title: "Enviado", desc: "Postado nos Correios/Transportadora" },
-    { step: 5, title: "Entregue", desc: "Recebido no endereço" },
-  ];
+  const isPickup = order.shippingMethod === "Retirada no Local";
+  const timelineSteps = isPickup
+    ? [
+        { step: 1, title: "Pedido Realizado", desc: "Registrado com sucesso" },
+        { step: 2, title: "Pagamento Confirmado", desc: "Aprovado via Mercado Pago" },
+        { step: 3, title: "Em Separação", desc: "Separando produtos no estoque" },
+        { step: 4, title: "Pronto p/ Retirada", desc: "Aguardando no Showroom (SP)" },
+        { step: 5, title: "Retirado", desc: "Entregue ao cliente no local" },
+      ]
+    : [
+        { step: 1, title: "Pedido Realizado", desc: "Registrado com sucesso" },
+        { step: 2, title: "Pagamento Confirmado", desc: "Aprovado via Mercado Pago" },
+        { step: 3, title: "Em Separação", desc: "Conferência e embalagem" },
+        { step: 4, title: "Enviado", desc: "Postado nos Correios/Transportadora" },
+        { step: 5, title: "Entregue", desc: "Recebido no endereço" },
+      ];
 
   // WhatsApp Support Message
   const cleanPhone = (cms.whatsappNumber || "5511999998888").replace(/\D/g, "");
@@ -557,16 +566,31 @@ export function OrderDetailView({
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
             <MapPin className="w-4 h-4 text-rose-500" />
             <h4 className="font-black text-xs uppercase tracking-wider text-slate-900 dark:text-white">
-              Endereço de Entrega
+              {isPickup ? "Ponto de Retirada Presencial" : "Endereço de Entrega"}
             </h4>
           </div>
-          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-            <strong>{order.customerName}</strong><br />
-            {order.shippingStreet}, Nº {order.shippingNumber}
-            {order.shippingComplement ? ` - ${order.shippingComplement}` : ""}<br />
-            {order.shippingNeighborhood} - {order.shippingCity}/{order.shippingState}<br />
-            CEP: {order.shippingCep}
-          </p>
+          {isPickup ? (
+            <div className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="font-bold text-slate-900 dark:text-white">Showroom JVMODAS (São Paulo - SP)</span>
+              </div>
+              <p className="text-slate-500 dark:text-slate-400">
+                Retirada gratuita no balcão após confirmação de pagamento.
+              </p>
+              <p className="pt-1 text-slate-700 dark:text-slate-300">
+                Retirante cadastrado: <strong>{order.customerName}</strong> ({order.customerPhone})
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              <strong>{order.customerName}</strong><br />
+              {order.shippingStreet}, Nº {order.shippingNumber}
+              {order.shippingComplement ? ` - ${order.shippingComplement}` : ""}<br />
+              {order.shippingNeighborhood} - {order.shippingCity}/{order.shippingState}<br />
+              CEP: {order.shippingCep}
+            </p>
+          )}
         </div>
 
         <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">

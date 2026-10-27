@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createPixPayment } from "@/lib/pix";
 import { createMercadoPagoPix, createMercadoPagoPreference } from "@/lib/mercadopago";
+import { calculateShippingOptions } from "@/lib/shipping";
 
 export async function POST(req: Request) {
   try {
@@ -22,7 +23,15 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!shipping?.cep || !shipping?.street || !shipping?.number || !shipping?.city) {
+    const isPickup = shipping?.method === "Retirada no Local";
+    const shippingState = shipping?.state || (isPickup ? "SP" : "");
+    const shippingCity = shipping?.city || (isPickup ? "São Paulo" : "");
+    const shippingStreet = shipping?.street || (isPickup ? "Showroom JVMODAS - Retirada Presencial" : "");
+    const shippingNumber = shipping?.number || (isPickup ? "Balcão" : "");
+    const shippingNeighborhood = shipping?.neighborhood || (isPickup ? "Centro" : "");
+    const shippingCep = shipping?.cep || (isPickup ? "01001-000" : "");
+
+    if (!isPickup && (!shippingCep || !shippingStreet || !shippingNumber || !shippingCity)) {
       return NextResponse.json(
         { error: "Endereço de entrega incompleto." },
         { status: 400 }
@@ -89,13 +98,17 @@ export async function POST(req: Request) {
       });
     }
 
-    // 2. Fetch CMS settings for Free Shipping rule
+    // 2. Fetch CMS settings for Free Shipping rule and verify shipping rates
     const cms = await prisma.cmsSettings.findUnique({ where: { id: "default" } });
     const freeShippingThreshold = cms?.freeShippingThreshold ?? 199.0;
 
-    let shippingPrice = Number(shipping.price) || 0;
-    if (subtotal >= freeShippingThreshold && shipping.method === "Frete Grátis") {
+    let shippingPrice = 0;
+    if (isPickup) {
       shippingPrice = 0;
+    } else {
+      const options = calculateShippingOptions(shippingState, subtotal, freeShippingThreshold);
+      const matched = options.find((o) => o.method === shipping.method);
+      shippingPrice = matched ? matched.price : Number(shipping.price) || 0;
     }
 
     // 3. Calculate coupon discount
@@ -217,14 +230,14 @@ export async function POST(req: Request) {
           customerEmail: customer.email,
           customerCpf: customer.cpf,
           customerPhone: customer.phone,
-          shippingCep: shipping.cep,
-          shippingStreet: shipping.street,
-          shippingNumber: shipping.number,
+          shippingCep,
+          shippingStreet,
+          shippingNumber,
           shippingComplement: shipping.complement || null,
-          shippingNeighborhood: shipping.neighborhood || "",
-          shippingCity: shipping.city,
-          shippingState: shipping.state,
-          shippingMethod: shipping.method || "PAC Econômico",
+          shippingNeighborhood,
+          shippingCity,
+          shippingState,
+          shippingMethod: shipping.method || (isPickup ? "Retirada no Local" : "PAC Econômico"),
           shippingPrice,
           subtotal,
           discount,
