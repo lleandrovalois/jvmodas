@@ -218,8 +218,12 @@ export default function CheckoutPage() {
         throw new Error(data.error || "Erro ao processar checkout.");
       }
 
-      // Clear cart and redirect to order confirmed page
+      // Clear cart and redirect
       clearCart();
+      if (paymentMethod === "CREDIT_CARD" && data.mercadoPagoUrl) {
+        window.location.href = data.mercadoPagoUrl;
+        return;
+      }
       router.push(`/order-confirmed/${data.orderId}`);
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : "Ocorreu um erro ao finalizar o pedido.");

@@ -33,6 +33,16 @@ export default function OrderConfirmedPage({
   const [copied, setCopied] = useState(false);
   const [simulating, setSimulating] = useState(false);
   const [timeLeft, setTimeLeft] = useState(900); // 15 minutes
+  const [isDevMode, setIsDevMode] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get("dev") === "true" || window.location.hostname === "localhost") {
+        setIsDevMode(true);
+      }
+    }
+  }, []);
 
   // Fetch order
   const fetchOrder = async () => {
@@ -300,24 +310,26 @@ export default function OrderConfirmedPage({
                   </a>
                 )}
 
-                {/* Simulation button for demo */}
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <button
-                    onClick={handleSimulatePayment}
-                    disabled={simulating}
-                    className="w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    <Zap className="w-4 h-4 text-amber-300" />
-                    <span>
-                      {simulating
-                        ? "Processando aprovação..."
-                        : "Simular Pagamento no Banco (Aprovar Imediatamente)"}
-                    </span>
-                  </button>
-                  <p className="text-[10px] text-slate-400 text-center mt-1">
-                    Ambiente de teste: Este botão aciona o webhook para aprovação instantânea.
-                  </p>
-                </div>
+                {/* Simulation button for demo (only visible in dev or with ?dev=true) */}
+                {isDevMode && (
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      onClick={handleSimulatePayment}
+                      disabled={simulating}
+                      className="w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <Zap className="w-4 h-4 text-amber-300" />
+                      <span>
+                        {simulating
+                          ? "Processando aprovação..."
+                          : "Simular Pagamento no Banco (Aprovar Imediatamente)"}
+                      </span>
+                    </button>
+                    <p className="text-[10px] text-slate-400 text-center mt-1">
+                      Ambiente de teste (visível apenas com ?dev=true ou no localhost).
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -123,6 +123,8 @@ export async function POST(req: Request) {
 
     let mercadoPagoUrl: string | null = null;
 
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://jvmodas.klynner.com.br";
+
     if (payment.method === "PIX") {
       const [firstName, ...rest] = (customer.name || "").trim().split(" ");
       const lastName = rest.join(" ") || "Cliente";
@@ -138,6 +140,7 @@ export async function POST(req: Request) {
           lastName,
           cpf: customer.cpf,
         },
+        notificationUrl: `${baseUrl}/api/webhook/payment`,
       });
 
       if (mpResult.success && mpResult.qrCode) {
@@ -161,7 +164,6 @@ export async function POST(req: Request) {
 
       // Gera link oficial do Mercado Pago para pagamento seguro
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://177.7.60.189:3002";
         const pref = await createMercadoPagoPreference({
           orderId,
           items: validatedItems.map((v) => ({
@@ -181,6 +183,7 @@ export async function POST(req: Request) {
             failure: `${baseUrl}/checkout`,
             pending: `${baseUrl}/order-confirmed/${orderId}`,
           },
+          notificationUrl: `${baseUrl}/api/webhook/payment`,
         });
         if (pref.success && pref.initPoint) {
           mercadoPagoUrl = pref.initPoint;
@@ -189,7 +192,7 @@ export async function POST(req: Request) {
         console.warn("Mercado Pago Preference generation notice:", e);
       }
 
-      paymentStatus = "APPROVED";
+      paymentStatus = "PENDING";
     }
 
     // 6. Database Transaction: Create order, create items, decrement stock

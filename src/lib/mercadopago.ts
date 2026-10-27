@@ -3,7 +3,7 @@ import { MercadoPagoConfig, Payment, Preference } from "mercadopago";
 const accessToken =
   process.env.MERCADO_PAGO_ACCESS_TOKEN ||
   process.env.MERCADOPAGO_ACCESS_TOKEN ||
-  "APP_USR-8216607742863449-102711-07d502be43e1b94e92653d0da3aa3e86-3797792276";
+  "APP_USR-7551704743249522-102710-090b5a612b964b832d639e1ea1a7958e-23547703";
 
 export const mpClient = new MercadoPagoConfig({
   accessToken,
@@ -92,6 +92,7 @@ interface CreatePreferenceParams {
     failure: string;
     pending: string;
   };
+  notificationUrl?: string;
 }
 
 export async function createMercadoPagoPreference({
@@ -100,6 +101,7 @@ export async function createMercadoPagoPreference({
   payer,
   shippingPrice = 0,
   backUrls,
+  notificationUrl,
 }: CreatePreferenceParams) {
   try {
     const preferenceItems = items.map((item) => ({
@@ -131,6 +133,7 @@ export async function createMercadoPagoPreference({
           email: payer.email,
         },
         back_urls: backUrls,
+        notification_url: notificationUrl,
       },
     });
 
