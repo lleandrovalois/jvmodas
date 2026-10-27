@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createPixPayment } from "@/lib/pix";
+import { createMercadoPagoPix, createMercadoPagoPreference } from "@/lib/mercadopago";
 
 export async function POST(req: Request) {
   try {
@@ -120,20 +121,74 @@ export async function POST(req: Request) {
     let cardInstallments: number | null = null;
     let paymentStatus = "PENDING";
 
+    let mercadoPagoUrl: string | null = null;
+
     if (payment.method === "PIX") {
-      const pix = await createPixPayment({
-        amount: total,
-        txId: orderId,
-        merchantName: cms?.brandName || "JVMODAS FITNESS",
+      const [firstName, ...rest] = (customer.name || "").trim().split(" ");
+      const lastName = rest.join(" ") || "Cliente";
+
+      // 1. Tenta gerar via Mercado Pago oficial
+      const mpResult = await createMercadoPagoPix({
+        transactionAmount: total,
+        description: `Pedido ${orderId} - ${cms?.brandName || "JVMODAS FITNESS"}`,
+        orderId,
+        payer: {
+          email: customer.email,
+          firstName,
+          lastName,
+          cpf: customer.cpf,
+        },
       });
-      pixQrCodeUrl = pix.qrCodeDataUrl;
-      pixCopyPasteCode = pix.copiaECola;
+
+      if (mpResult.success && mpResult.qrCode) {
+        pixCopyPasteCode = mpResult.qrCode;
+        pixQrCodeUrl = mpResult.qrCodeBase64;
+      } else {
+        // Fallback seguro para gerador padrão EMV Pix
+        const pix = await createPixPayment({
+          amount: total,
+          txId: orderId,
+          merchantName: cms?.brandName || "JVMODAS FITNESS",
+        });
+        pixQrCodeUrl = pix.qrCodeDataUrl;
+        pixCopyPasteCode = pix.copiaECola;
+      }
       paymentStatus = "PENDING";
     } else if (payment.method === "CREDIT_CARD") {
       const cleanCard = (payment.card?.number || "").replace(/\D/g, "");
       cardLastDigits = cleanCard.slice(-4) || "4242";
       cardInstallments = Number(payment.card?.installments) || 1;
-      // In production, tokenize with Mercado Pago / Asaas SDK
+
+      // Gera link oficial do Mercado Pago para pagamento seguro
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://177.7.60.189:3002";
+        const pref = await createMercadoPagoPreference({
+          orderId,
+          items: validatedItems.map((v) => ({
+            id: v.variantId,
+            title: `${v.productName} (${v.size}/${v.color})`,
+            unitPrice: v.price,
+            quantity: v.quantity,
+            pictureUrl: v.imageUrl,
+          })),
+          payer: {
+            name: customer.name,
+            email: customer.email,
+          },
+          shippingPrice,
+          backUrls: {
+            success: `${baseUrl}/order-confirmed/${orderId}`,
+            failure: `${baseUrl}/checkout`,
+            pending: `${baseUrl}/order-confirmed/${orderId}`,
+          },
+        });
+        if (pref.success && pref.initPoint) {
+          mercadoPagoUrl = pref.initPoint;
+        }
+      } catch (e) {
+        console.warn("Mercado Pago Preference generation notice:", e);
+      }
+
       paymentStatus = "APPROVED";
     }
 
@@ -206,6 +261,7 @@ export async function POST(req: Request) {
         total: newOrder.total,
         pixQrCodeUrl: newOrder.pixQrCodeUrl,
         pixCopyPasteCode: newOrder.pixCopyPasteCode,
+        mercadoPagoUrl,
         order: newOrder,
       },
       { status: 201 }
