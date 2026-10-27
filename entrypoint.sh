@@ -30,6 +30,32 @@ else
 
   # Vincula categoryId em produtos antigos onde categoryId estiver nulo
   sqlite3 /app/data/jvmodas.db "UPDATE products SET categoryId = (SELECT id FROM categories WHERE LOWER(categories.name) = LOWER(products.category)) WHERE categoryId IS NULL AND category IS NOT NULL;" 2>/dev/null || true
+
+  # Garante que order_items permita productId nulo e desvinculação segura ao excluir produtos
+  sqlite3 /app/data/jvmodas.db "
+    PRAGMA foreign_keys=off;
+    BEGIN TRANSACTION;
+    CREATE TABLE IF NOT EXISTS order_items_new (
+      id TEXT NOT NULL PRIMARY KEY,
+      orderId TEXT NOT NULL,
+      productId TEXT,
+      productName TEXT NOT NULL,
+      size TEXT NOT NULL,
+      color TEXT NOT NULL,
+      price REAL NOT NULL,
+      quantity INTEGER NOT NULL,
+      imageUrl TEXT NOT NULL,
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT order_items_orderId_fkey FOREIGN KEY (orderId) REFERENCES orders (id) ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT order_items_productId_fkey FOREIGN KEY (productId) REFERENCES products (id) ON DELETE SET NULL ON UPDATE CASCADE
+    );
+    INSERT OR IGNORE INTO order_items_new (id, orderId, productId, productName, size, color, price, quantity, imageUrl, createdAt)
+      SELECT id, orderId, productId, productName, size, color, price, quantity, imageUrl, createdAt FROM order_items;
+    DROP TABLE IF EXISTS order_items;
+    ALTER TABLE order_items_new RENAME TO order_items;
+    COMMIT;
+    PRAGMA foreign_keys=on;
+  " 2>/dev/null || true
 fi
 
 exec "$@"

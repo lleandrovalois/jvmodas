@@ -93,7 +93,7 @@ export interface CmsSettings {
 export interface OrderItem {
   id: string;
   orderId: string;
-  productId: string;
+  productId?: string | null;
   productName: string;
   size: string;
   color: string;

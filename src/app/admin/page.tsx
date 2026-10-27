@@ -392,10 +392,16 @@ export default function AdminPage() {
   const handleDeleteProduct = async (id: string, name: string) => {
     if (confirm(`Tem certeza que deseja remover o produto "${name}" do catálogo?`)) {
       try {
-        await fetch(`/api/products/${id}`, { method: "DELETE" });
+        const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || "Erro ao remover produto do catálogo");
+          return;
+        }
         fetchProducts();
       } catch (e) {
         console.error(e);
+        alert("Erro de conexão ao tentar remover produto");
       }
     }
   };
@@ -1622,26 +1628,39 @@ export default function AdminPage() {
 
             {/* PRODUCT ADD / EDIT MODAL */}
             {productModalOpen && (
-              <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+              <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-3 sm:p-6 flex justify-center items-start">
                 <div
                   onClick={() => setProductModalOpen(false)}
-                  className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+                  className="fixed inset-0 -z-10"
                 />
 
-                <div className="relative bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl z-10 max-h-[90vh] overflow-y-auto">
-                  <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
-                    <h3 className="text-lg font-black text-white uppercase tracking-tight">
-                      {editingProduct ? "Editar Produto" : "Novo Produto no Catálogo"}
-                    </h3>
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  className="relative bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl max-w-2xl w-full shadow-2xl z-10 my-auto flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] overflow-hidden"
+                >
+                  {/* Sticky Header */}
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur shrink-0">
+                    <div>
+                      <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
+                        {editingProduct ? "Editar Produto" : "Novo Produto no Catálogo"}
+                      </h3>
+                      <p className="text-[11px] text-slate-400">
+                        {editingProduct ? "Atualize as informações, fotos e estoque." : "Cadastre novo produto com fotos e grade de estoque."}
+                      </p>
+                    </div>
                     <button
+                      type="button"
                       onClick={() => setProductModalOpen(false)}
-                      className="p-1.5 rounded-full text-slate-400 hover:text-white"
+                      className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                      title="Fechar"
                     >
                       <X className="w-5 h-5" />
                     </button>
                   </div>
 
-                  <form onSubmit={handleSaveProduct} className="space-y-4">
+                  {/* Scrollable Form Body */}
+                  <form id="product-form" onSubmit={handleSaveProduct} className="flex-1 overflow-y-auto p-6 space-y-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-400 mb-1">
                         Nome do Produto *
@@ -1656,7 +1675,7 @@ export default function AdminPage() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <label className="text-xs font-bold text-slate-400">
@@ -1700,7 +1719,7 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-slate-400 mb-1">
                           Preço Original "De" (R$) *
@@ -1786,23 +1805,25 @@ export default function AdminPage() {
                         ))}
                       </div>
                     </div>
-
-                    <div className="pt-4 flex justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setProductModalOpen(false)}
-                        className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-rose-600 text-white hover:bg-rose-500 shadow-md"
-                      >
-                        Salvar Produto
-                      </button>
-                    </div>
                   </form>
+
+                  {/* Sticky Footer */}
+                  <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/95 flex justify-end items-center gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setProductModalOpen(false)}
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      form="product-form"
+                      className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-rose-600 text-white hover:bg-rose-500 shadow-md transition"
+                    >
+                      Salvar Produto
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1935,16 +1956,20 @@ export default function AdminPage() {
 
             {/* ORDER DETAILS MODAL */}
             {selectedOrder && (
-              <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+              <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-3 sm:p-6 flex justify-center items-start">
                 <div
                   onClick={() => setSelectedOrder(null)}
-                  className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+                  className="fixed inset-0 -z-10"
                 />
 
-                <div className="relative bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl z-10 max-h-[90vh] overflow-y-auto space-y-6">
-                  <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  className="relative bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl max-w-2xl w-full shadow-2xl z-10 my-auto flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] overflow-hidden"
+                >
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur shrink-0">
                     <div>
-                      <h3 className="text-lg font-black text-white uppercase tracking-tight">
+                      <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
                         Pedido {selectedOrder.id}
                       </h3>
                       <p className="text-xs text-slate-400">
@@ -1958,12 +1983,16 @@ export default function AdminPage() {
                       </p>
                     </div>
                     <button
+                      type="button"
                       onClick={() => setSelectedOrder(null)}
-                      className="p-1.5 rounded-full text-slate-400 hover:text-white"
+                      className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                      title="Fechar"
                     >
                       <X className="w-5 h-5" />
                     </button>
                   </div>
+
+                  <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
                   {/* Customer and Delivery Info */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -2096,6 +2125,8 @@ export default function AdminPage() {
                     </a>
                   </div>
 
+                  {/* Close scrollable body */}
+                  </div>
                 </div>
               </div>
             )}

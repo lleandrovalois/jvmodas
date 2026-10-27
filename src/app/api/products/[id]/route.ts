@@ -139,6 +139,19 @@ export async function DELETE(
     }
 
     const { id } = await params;
+
+    // Desvincula itens de pedidos existentes para preservar histórico da compra sem violar chave estrangeira
+    await prisma.orderItem.updateMany({
+      where: { productId: id },
+      data: { productId: null },
+    });
+
+    // Remove variações de estoque associadas
+    await prisma.productVariant.deleteMany({
+      where: { productId: id },
+    });
+
+    // Remove o produto do catálogo
     await prisma.product.delete({
       where: { id },
     });
