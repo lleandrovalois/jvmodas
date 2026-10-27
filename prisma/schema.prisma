@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("ADMIN") // ADMIN or CUSTOMER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Product {
+  id            String           @id @default(uuid())
+  name          String
+  slug          String           @unique
+  description   String
+  category      String           // Leggings, Tops, Shorts, Conjuntos, Macacões, Acessórios
+  originalPrice Float
+  price         Float
+  images        String           // JSON stringified array of URLs
+  featured      Boolean          @default(false)
+  badge         String?          // LANÇAMENTO, MAIS VENDIDO, 20% OFF, etc.
+  rating        Float            @default(4.9)
+  reviewsCount  Int              @default(32)
+  variants      ProductVariant[]
+  orderItems    OrderItem[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size      String   // P, M, G, GG
+  color     String   // ex: Preto Carbono, Rosa Quartz, Verde Militar
+  colorHex  String   // ex: #171717, #f43f5e, #15803d
+  stock     Int      @default(0)
+  sku       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("product_variants")
+}
+
+model Order {
+  id                   String      @id // e.g. "JVM-109284"
+  customerName         String
+  customerEmail        String
+  customerCpf          String
+  customerPhone        String
+  shippingCep          String
+  shippingStreet       String
+  shippingNumber       String
+  shippingComplement   String?
+  shippingNeighborhood String
+  shippingCity         String
+  shippingState        String
+  shippingMethod       String      // PAC, SEDEX, Frete Grátis
+  shippingPrice        Float       @default(0)
+  subtotal             Float
+  discount             Float       @default(0)
+  total                Float
+  couponCode           String?
+  paymentMethod        String      // PIX, CREDIT_CARD
+  paymentStatus        String      @default("PENDING") // PENDING, APPROVED, CANCELLED, SHIPPED
+  trackingCode         String?
+  pixQrCodeUrl         String?
+  pixCopyPasteCode     String?
+  cardLastDigits       String?
+  cardInstallments     Int?
+  items                OrderItem[]
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  productName String
+  size        String
+  color       String
+  price       Float
+  quantity    Int
+  imageUrl    String
+  createdAt   DateTime @default(now())
+
+  @@map("order_items")
+}
+
+model CmsSettings {
+  id                    String   @id @default("default")
+  brandName             String   @default("JVMODAS")
+  brandTagline          String   @default("Moda Fitness de Alta Performance")
+  logoUrl               String?
+  primaryColor          String   @default("#0f172a") // Slate-900 / Dark Luxury Athletic
+  secondaryColor        String   @default("#f43f5e") // Rose-500 Vibrant Fitness
+  accentColor           String   @default("#10b981") // Emerald-500
+  topBarText            String   @default("🔥 FRETE GRÁTIS EM COMPRAS ACIMA DE R$ 199 | 10% OFF COM CUPOM: JV10")
+  topBarActive          Boolean  @default(true)
+  heroTitle             String   @default("SUPERE SEUS LIMITES COM ESTILO & CONFORTO")
+  heroSubtitle          String   @default("Tecnologia de compressão anatômica, zero transparência e design pensado para potencializar seus treinos.")
+  heroBannerUrl         String   @default("https://images.unsplash.com/photo-1518611012118-696072aa579a?q=80&w=1600&auto=format&fit=crop")
+  heroCtaText           String   @default("Explorar Coleção")
+  promoBannerTitle      String   @default("NOVA LINHA SEAMLESS 2026")
+  promoBannerSubtitle   String   @default("Sem costura, toque macio e máxima respirabilidade para suas sessões de treino.")
+  promoBannerUrl        String   @default("https://images.unsplash.com/photo-1540497077202-7c8a3999166f?q=80&w=1600&auto=format&fit=crop")
+  promoBannerLink       String   @default("/?categoria=Leggings")
+  instagramUrl          String   @default("https://instagram.com/jvmodasfitness")
+  whatsappNumber        String   @default("5511999998888")
+  freeShippingThreshold Float    @default(199.00)
+  updatedAt             DateTime @updatedAt
+
+  @@map("cms_settings")
+}
