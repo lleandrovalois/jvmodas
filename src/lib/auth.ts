@@ -11,9 +11,10 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 
 export async function createAdminSession(): Promise<void> {
   const cookieStore = await cookies();
+  const isHttps = (process.env.NEXT_PUBLIC_APP_URL || "").startsWith("https://") || process.env.COOKIE_SECURE === "true";
   cookieStore.set(ADMIN_COOKIE_NAME, ADMIN_TOKEN, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isHttps,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7, // 7 days

@@ -191,15 +191,20 @@ export default function AdminPage() {
       });
 
       if (!res.ok) {
-        throw new Error("Erro ao salvar configurações do CMS");
+        const errJson = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          setIsAuthenticated(false);
+          throw new Error("Sua sessão expirou ou não está autorizada. Por favor, efetue login novamente.");
+        }
+        throw new Error(errJson.error || "Erro ao salvar configurações do CMS");
       }
 
       await refreshCms();
       setCmsSuccessMessage("✅ Identidade visual e layout salvos e refletidos com sucesso!");
       setTimeout(() => setCmsSuccessMessage(""), 5000);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      alert("Falha ao salvar configurações.");
+      alert(err instanceof Error ? err.message : "Falha ao salvar configurações.");
     } finally {
       setSavingCms(false);
     }
