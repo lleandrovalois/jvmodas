@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Product } from "@/types";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductQuickViewModal } from "@/components/ProductQuickViewModal";
@@ -30,7 +30,7 @@ export function VitrineSection({
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
-  const categories = [
+  const [categories, setCategories] = useState<string[]>([
     "Todos",
     "Leggings",
     "Tops",
@@ -38,15 +38,32 @@ export function VitrineSection({
     "Shorts",
     "Macacões",
     "Acessórios",
-  ];
+  ]);
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const activeNames = data.filter((c: any) => c.isActive).map((c: any) => c.name);
+          if (activeNames.length > 0) {
+            setCategories(["Todos", ...activeNames]);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const sizes = ["P", "M", "G", "GG"];
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
     return initialProducts.filter((product) => {
+      const prodCatName = typeof product.category === "object" ? product.category?.name : (product.category || "");
+
       // Category filter
-      if (selectedCategory !== "Todos" && product.category !== selectedCategory) {
+      if (selectedCategory !== "Todos" && prodCatName !== selectedCategory) {
         return false;
       }
 
@@ -63,7 +80,7 @@ export function VitrineSection({
         const term = searchTerm.toLowerCase();
         const matchesName = product.name.toLowerCase().includes(term);
         const matchesDesc = product.description.toLowerCase().includes(term);
-        const matchesCategory = product.category.toLowerCase().includes(term);
+        const matchesCategory = (prodCatName || "").toLowerCase().includes(term);
         if (!matchesName && !matchesDesc && !matchesCategory) return false;
       }
 

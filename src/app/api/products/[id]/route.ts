@@ -14,6 +14,7 @@ export async function GET(
       },
       include: {
         variants: true,
+        category: true,
       },
     });
 
@@ -61,6 +62,21 @@ export async function PUT(
       variants,
     } = body;
 
+    let categoryId = body.categoryId;
+    if (!categoryId && (category || body.category)) {
+      const catIdentifier = category || body.category;
+      const foundCat = await prisma.category.findFirst({
+        where: {
+          OR: [
+            { id: catIdentifier },
+            { name: catIdentifier },
+            { slug: catIdentifier },
+          ],
+        },
+      });
+      if (foundCat) categoryId = foundCat.id;
+    }
+
     // Delete existing variants and re-create if provided
     if (variants && Array.isArray(variants)) {
       await prisma.productVariant.deleteMany({
@@ -73,7 +89,7 @@ export async function PUT(
       data: {
         name,
         description,
-        category,
+        ...(categoryId !== undefined ? { categoryId: categoryId || null } : {}),
         originalPrice: Number(originalPrice),
         price: Number(price),
         images: typeof images === "string" ? images : JSON.stringify(images),
@@ -95,6 +111,7 @@ export async function PUT(
       },
       include: {
         variants: true,
+        category: true,
       },
     });
 

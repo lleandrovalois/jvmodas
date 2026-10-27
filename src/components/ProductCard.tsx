@@ -182,7 +182,9 @@ export function ProductCard({
         <div>
           {/* Category & Rating */}
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-            <span className="uppercase font-bold tracking-wider">{product.category}</span>
+            <span className="uppercase font-bold tracking-wider">
+              {typeof product.category === "object" ? product.category?.name : (product.category || "Fitness")}
+            </span>
             <div className="flex items-center gap-1 text-amber-500 font-bold">
               <Star className="w-3.5 h-3.5 fill-current" />
               <span>{product.rating.toFixed(1)}</span>

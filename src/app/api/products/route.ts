@@ -15,7 +15,11 @@ export async function GET(req: Request) {
     const where: any = {};
 
     if (category && category !== "Todos") {
-      where.category = category;
+      where.OR = [
+        { categoryId: category },
+        { category: { slug: category } },
+        { category: { name: category } },
+      ];
     }
 
     if (featured === "true") {
@@ -26,7 +30,7 @@ export async function GET(req: Request) {
       where.OR = [
         { name: { contains: search } },
         { description: { contains: search } },
-        { category: { contains: search } },
+        { category: { name: { contains: search } } },
       ];
     }
 
@@ -56,6 +60,7 @@ export async function GET(req: Request) {
       orderBy,
       include: {
         variants: true,
+        category: true,
       },
     });
 
@@ -102,12 +107,27 @@ export async function POST(req: Request) {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)+/g, "");
 
+    let categoryId = body.categoryId;
+    if (!categoryId && (category || body.category)) {
+      const catIdentifier = category || body.category;
+      const foundCat = await prisma.category.findFirst({
+        where: {
+          OR: [
+            { id: catIdentifier },
+            { name: catIdentifier },
+            { slug: catIdentifier },
+          ],
+        },
+      });
+      if (foundCat) categoryId = foundCat.id;
+    }
+
     const newProduct = await prisma.product.create({
       data: {
         name,
         slug: `${generatedSlug}-${Date.now().toString().slice(-4)}`,
         description: description || "",
-        category: category || "Leggings",
+        categoryId: categoryId || null,
         originalPrice: Number(originalPrice) || Number(price),
         price: Number(price),
         images: typeof images === "string" ? images : JSON.stringify(images || []),
@@ -125,6 +145,7 @@ export async function POST(req: Request) {
       },
       include: {
         variants: true,
+        category: true,
       },
     });
 

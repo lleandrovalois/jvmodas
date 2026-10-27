@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useCms } from "@/context/CmsContext";
 import { useCart } from "@/context/CartContext";
@@ -29,7 +29,30 @@ export function Navbar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const categories = ["Todos", "Leggings", "Tops", "Conjuntos", "Shorts", "Macacões", "Acessórios"];
+  const [categories, setCategories] = useState<string[]>([
+    "Todos",
+    "Leggings",
+    "Tops",
+    "Conjuntos",
+    "Shorts",
+    "Macacões",
+    "Acessórios",
+  ]);
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const activeNames = data.filter((c: any) => c.isActive).map((c: any) => c.name);
+          if (activeNames.length > 0) {
+            setCategories(["Todos", ...activeNames]);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;

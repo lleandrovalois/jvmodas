@@ -20,12 +20,27 @@ model User {
   @@map("users")
 }
 
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  isActive    Boolean   @default(true)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([slug])
+  @@map("categories")
+}
+
 model Product {
   id            String           @id @default(uuid())
   name          String
   slug          String           @unique
   description   String
-  category      String           // Leggings, Tops, Shorts, Conjuntos, Macacões, Acessórios
+  categoryId    String?
+  category      Category?        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   originalPrice Float
   price         Float
   images        String           // JSON stringified array of URLs

@@ -186,7 +186,7 @@ export function ProductQuickViewModal({
               {/* Category & Badge */}
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs uppercase font-black tracking-widest text-rose-600 dark:text-rose-400">
-                  {product.category}
+                  {typeof product.category === "object" ? product.category?.name : (product.category || "Fitness")}
                 </span>
                 {product.badge && (
                   <span

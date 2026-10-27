@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useCms } from "@/context/CmsContext";
-import { Product, Order, CmsSettings } from "@/types";
+import { Product, Order, CmsSettings, Category } from "@/types";
 import {
   ShieldCheck,
   LayoutDashboard,
@@ -38,6 +38,7 @@ import {
   ShieldAlert,
   Layers,
   Monitor,
+  FolderTree,
 } from "lucide-react";
 import { THEME_PRESETS, FACTORY_DEFAULT_PRESET, ThemePreset } from "@/lib/theme-presets";
 
@@ -58,6 +59,9 @@ export default function AdminPage() {
   const [savingCms, setSavingCms] = useState(false);
   const [cmsSuccessMessage, setCmsSuccessMessage] = useState("");
 
+  // Categories State
+  const [categoriesList, setCategoriesList] = useState<Category[]>([]);
+
   // Products State
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -65,7 +69,7 @@ export default function AdminPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productForm, setProductForm] = useState({
     name: "",
-    category: "Leggings",
+    categoryId: "",
     originalPrice: 149.9,
     price: 119.9,
     badge: "LANÇAMENTO",
@@ -115,6 +119,19 @@ export default function AdminPage() {
   const loadData = async () => {
     fetchProducts();
     fetchOrders();
+    fetchCategories();
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/categories");
+      if (res.ok) {
+        const data = await res.json();
+        setCategoriesList(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const fetchProducts = async () => {
@@ -276,9 +293,10 @@ export default function AdminPage() {
   // Product CRUD
   const handleOpenAddProduct = () => {
     setEditingProduct(null);
+    const firstActive = categoriesList.find((c) => c.isActive);
     setProductForm({
       name: "",
-      category: "Leggings",
+      categoryId: firstActive ? firstActive.id : "",
       originalPrice: 149.9,
       price: 119.9,
       badge: "LANÇAMENTO",
@@ -305,9 +323,15 @@ export default function AdminPage() {
       imgs = [prod.images];
     }
 
+    const currentCatId =
+      prod.categoryId ||
+      (typeof prod.category === "object" ? prod.category?.id : "") ||
+      (typeof prod.category === "string" ? categoriesList.find((c) => c.name === prod.category)?.id : "") ||
+      "";
+
     setProductForm({
       name: prod.name,
-      category: prod.category,
+      categoryId: currentCatId,
       originalPrice: prod.originalPrice,
       price: prod.price,
       badge: prod.badge || "",
@@ -333,7 +357,7 @@ export default function AdminPage() {
 
     const payload = {
       name: productForm.name,
-      category: productForm.category,
+      categoryId: productForm.categoryId || null,
       originalPrice: productForm.originalPrice,
       price: productForm.price,
       badge: productForm.badge || null,
@@ -552,6 +576,14 @@ export default function AdminPage() {
             <Package className="w-4 h-4" />
             <span>Catálogo ({products.length})</span>
           </button>
+
+          <Link
+            href="/admin/categorias"
+            className="py-3 text-xs font-black uppercase tracking-wider flex items-center gap-2 border-b-2 border-transparent text-slate-400 hover:text-rose-400 transition"
+          >
+            <FolderTree className="w-4 h-4 text-rose-500" />
+            <span>Categorias ({categoriesList.length})</span>
+          </Link>
 
           <button
             onClick={() => setActiveTab("orders")}
@@ -1529,7 +1561,9 @@ export default function AdminPage() {
                           </td>
 
                           <td className="py-3.5 px-4 font-bold text-slate-400">
-                            {prod.category}
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-slate-950 border border-slate-800 text-slate-300 font-semibold">
+                              {typeof prod.category === "object" ? prod.category?.name : (prod.category || "Sem Categoria")}
+                            </span>
                           </td>
 
                           <td className="py-3.5 px-4">
@@ -1624,20 +1658,31 @@ export default function AdminPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-slate-400 mb-1">
-                          Categoria *
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-bold text-slate-400">
+                            Categoria *
+                          </label>
+                          <Link
+                            href="/admin/categorias"
+                            target="_blank"
+                            className="text-[10px] text-rose-400 hover:text-rose-300 font-semibold inline-flex items-center gap-1"
+                          >
+                            <FolderTree className="w-3 h-3" /> Gerenciar
+                          </Link>
+                        </div>
                         <select
-                          value={productForm.category}
-                          onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
+                          value={productForm.categoryId}
+                          onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}
                           className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white font-bold"
                         >
-                          <option value="Leggings">Leggings</option>
-                          <option value="Tops">Tops</option>
-                          <option value="Conjuntos">Conjuntos</option>
-                          <option value="Shorts">Shorts</option>
-                          <option value="Macacões">Macacões</option>
-                          <option value="Acessórios">Acessórios</option>
+                          <option value="" disabled>Selecione uma categoria...</option>
+                          {categoriesList
+                            .filter((c) => c.isActive || c.id === productForm.categoryId)
+                            .map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name} {!c.isActive ? "(Inativa)" : ""}
+                              </option>
+                            ))}
                         </select>
                       </div>
 

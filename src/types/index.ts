@@ -8,12 +8,32 @@ export interface ProductVariant {
   sku?: string | null;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  isActive: boolean;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  _count?: {
+    products: number;
+  };
+}
+
+export interface CategoryWithCount extends Category {
+  _count: {
+    products: number;
+  };
+}
+
 export interface Product {
   id: string;
   name: string;
   slug: string;
   description: string;
-  category: string;
+  categoryId?: string | null;
+  category?: Category | string | null;
   originalPrice: number;
   price: number;
   images: string; // JSON string of string[]

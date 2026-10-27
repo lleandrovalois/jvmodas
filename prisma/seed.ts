@@ -10,6 +10,7 @@ async function main() {
   await prisma.order.deleteMany();
   await prisma.productVariant.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.category.deleteMany();
   await prisma.cmsSettings.deleteMany();
   await prisma.user.deleteMany();
 
@@ -56,7 +57,26 @@ async function main() {
   });
   console.log(`✅ CMS Settings initialized: ${cms.brandName}`);
 
-  // 4. Products & Variants
+  // 4. Categories
+  const categoriesList = [
+    { name: "Leggings", slug: "leggings", description: "Leggings de alta compressão, toque macio e zero transparência." },
+    { name: "Tops", slug: "tops", description: "Tops fitness com sustentação inteligente e liberdade de movimento." },
+    { name: "Conjuntos", slug: "conjuntos", description: "Conjuntos seamless e canelados de alta performance." },
+    { name: "Shorts", slug: "shorts", description: "Shorts duplos e ciclistas com bolsos anatômicos funcionais." },
+    { name: "Macacões", slug: "macacoes", description: "Macacões modeladores de peça única com ajuste anatômico." },
+    { name: "Acessórios", slug: "acessorios", description: "Acessórios e complementos esportivos premium." },
+  ];
+
+  const categoryMap: Record<string, string> = {};
+  for (const cat of categoriesList) {
+    const createdCat = await prisma.category.create({
+      data: cat,
+    });
+    categoryMap[cat.name] = createdCat.id;
+  }
+  console.log(`✅ ${categoriesList.length} categories seeded!`);
+
+  // 5. Products & Variants
   const productsData = [
     {
       name: "Legging Emana® Zero Transparência Cintura Alta",
@@ -247,7 +267,7 @@ async function main() {
       data: {
         name: p.name,
         slug: p.slug,
-        category: p.category,
+        categoryId: categoryMap[p.category] || null,
         originalPrice: p.originalPrice,
         price: p.price,
         badge: p.badge,
