@@ -2456,8 +2456,11 @@ export default function AdminPage() {
 
               {/* 2. Direct 1-Click Status Buttons (All 6 Stages) */}
               <div>
-                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Ou clique direto no novo status:
+                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center justify-between">
+                  <span>Ou clique direto no novo status:</span>
+                  <span className="text-[10px] text-slate-500 font-normal">
+                    (Clique para atualizar instantaneamente)
+                  </span>
                 </div>
 
                 {(() => {
@@ -2470,26 +2473,23 @@ export default function AdminPage() {
                       sublabel: "Pendente",
                       icon: Clock,
                       color: "amber",
-                      activeClass: "bg-amber-600 ring-2 ring-white/90 shadow-xl shadow-amber-900/40 scale-[1.03]",
-                      inactiveClass: "bg-amber-600/30 hover:bg-amber-600/70 border border-amber-500/30 text-amber-200",
+                      activeClass: "bg-amber-600 border-2 border-amber-400 text-white shadow-lg shadow-amber-950/50",
                     },
                     {
                       id: "PAGO",
-                      label: "Aprovar Pagto",
-                      sublabel: "Aprovado",
+                      label: "Pagamento Aprovado",
+                      sublabel: "Pago / Confirmado",
                       icon: Check,
                       color: "emerald",
-                      activeClass: "bg-emerald-600 ring-2 ring-white/90 shadow-xl shadow-emerald-900/40 scale-[1.03]",
-                      inactiveClass: "bg-emerald-600/30 hover:bg-emerald-600/70 border border-emerald-500/30 text-emerald-200",
+                      activeClass: "bg-emerald-600 border-2 border-emerald-400 text-white shadow-lg shadow-emerald-950/50",
                     },
                     {
                       id: "SEPARANDO",
                       label: "Em Separação",
-                      sublabel: "Embalando",
+                      sublabel: "Embalando Pacote",
                       icon: Package,
                       color: "indigo",
-                      activeClass: "bg-indigo-600 ring-2 ring-white/90 shadow-xl shadow-indigo-900/40 scale-[1.03]",
-                      inactiveClass: "bg-indigo-600/30 hover:bg-indigo-600/70 border border-indigo-500/30 text-indigo-200",
+                      activeClass: "bg-indigo-600 border-2 border-indigo-400 text-white shadow-lg shadow-indigo-950/50",
                     },
                     {
                       id: "ENVIADO",
@@ -2497,8 +2497,7 @@ export default function AdminPage() {
                       sublabel: "Em Trânsito",
                       icon: Truck,
                       color: "cyan",
-                      activeClass: "bg-cyan-600 ring-2 ring-white/90 shadow-xl shadow-cyan-900/40 scale-[1.03]",
-                      inactiveClass: "bg-cyan-600/30 hover:bg-cyan-600/70 border border-cyan-500/30 text-cyan-200",
+                      activeClass: "bg-cyan-600 border-2 border-cyan-400 text-white shadow-lg shadow-cyan-950/50",
                     },
                     {
                       id: "ENTREGUE",
@@ -2506,22 +2505,20 @@ export default function AdminPage() {
                       sublabel: "Concluído",
                       icon: CheckCircle2,
                       color: "teal",
-                      activeClass: "bg-teal-600 ring-2 ring-white/90 shadow-xl shadow-teal-900/40 scale-[1.03]",
-                      inactiveClass: "bg-teal-600/30 hover:bg-teal-600/70 border border-teal-500/30 text-teal-200",
+                      activeClass: "bg-teal-600 border-2 border-teal-400 text-white shadow-lg shadow-teal-950/50",
                     },
                     {
                       id: "CANCELADO",
-                      label: "Cancelar",
+                      label: "Cancelar Pedido",
                       sublabel: "Cancelado",
                       icon: XCircle,
                       color: "rose",
-                      activeClass: "bg-rose-600 ring-2 ring-white/90 shadow-xl shadow-rose-900/40 scale-[1.03]",
-                      inactiveClass: "bg-rose-600/30 hover:bg-rose-600/70 border border-rose-500/30 text-rose-200",
+                      activeClass: "bg-rose-600 border-2 border-rose-400 text-white shadow-lg shadow-rose-950/50",
                     },
                   ];
 
                   return (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                       {statusButtons.map((btn) => {
                         const Icon = btn.icon;
                         const isActive = currentNorm === btn.id;
@@ -2532,27 +2529,48 @@ export default function AdminPage() {
                             type="button"
                             disabled={Boolean(updatingOrderId)}
                             onClick={() => handleApplyStatus(btn.id)}
-                            className={`py-3 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 active:scale-95 disabled:opacity-50 cursor-pointer text-white ${
-                              isActive ? btn.activeClass : btn.inactiveClass
+                            className={`p-3 rounded-2xl text-xs font-bold transition flex items-center gap-2.5 active:scale-[0.98] disabled:opacity-50 cursor-pointer text-left relative overflow-hidden group ${
+                              isActive
+                                ? `${btn.activeClass} ring-2 ring-white/90`
+                                : "bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-300 hover:text-white"
                             }`}
                           >
-                            <div className="flex items-center gap-1">
-                              {isActive ? (
-                                <Check className="w-3.5 h-3.5 stroke-[3] text-white" />
-                              ) : (
-                                <Icon className="w-3.5 h-3.5 opacity-80" />
-                              )}
-                              <span className="truncate">{btn.label}</span>
-                            </div>
-                            <span
-                              className={`text-[9px] uppercase font-black tracking-wider px-1.5 py-0.5 rounded ${
+                            <div
+                              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition ${
                                 isActive
-                                  ? "bg-black/30 text-white font-extrabold ring-1 ring-white/50"
-                                  : "opacity-75"
+                                  ? "bg-white/20 text-white"
+                                  : "bg-slate-900/80 text-slate-400 group-hover:text-white border border-slate-700/60"
                               }`}
                             >
-                              {isActive ? "✓ Status Atual" : btn.sublabel}
-                            </span>
+                              {isActive ? (
+                                <Check className="w-4 h-4 stroke-[3] text-white" />
+                              ) : (
+                                <Icon className="w-4 h-4" />
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div
+                                className={`text-xs font-black truncate leading-tight ${
+                                  isActive ? "text-white" : "text-slate-200"
+                                }`}
+                              >
+                                {btn.label}
+                              </div>
+                              <div
+                                className={`text-[10px] font-semibold truncate mt-0.5 ${
+                                  isActive ? "text-white/80" : "text-slate-400"
+                                }`}
+                              >
+                                {btn.sublabel}
+                              </div>
+                            </div>
+
+                            {isActive && (
+                              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-white text-slate-900 shrink-0 shadow-xs">
+                                Atual
+                              </span>
+                            )}
                           </button>
                         );
                       })}
