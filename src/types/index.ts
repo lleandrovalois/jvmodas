@@ -126,6 +126,7 @@ export interface Order {
   trackingCode?: string | null;
   pixQrCodeUrl?: string | null;
   pixCopyPasteCode?: string | null;
+  mercadoPagoUrl?: string | null;
   cardLastDigits?: string | null;
   cardInstallments?: number | null;
   items: OrderItem[];

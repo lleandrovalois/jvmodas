@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Zap,
   Package,
+  ExternalLink,
 } from "lucide-react";
 
 export default function OrderConfirmedPage({
@@ -286,6 +287,18 @@ export default function OrderConfirmedPage({
                     </>
                   )}
                 </button>
+
+                {order.mercadoPagoUrl && (
+                  <a
+                    href={order.mercadoPagoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 px-4 rounded-xl font-extrabold text-xs uppercase tracking-wider bg-sky-500 hover:bg-sky-400 text-white transition flex items-center justify-center gap-2 shadow"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Pagar no Checkout Oficial Mercado Pago</span>
+                  </a>
+                )}
 
                 {/* Simulation button for demo */}
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800">

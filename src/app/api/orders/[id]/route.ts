@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isAdminAuthenticated } from "@/lib/auth";
+import { createMercadoPagoPreference } from "@/lib/mercadopago";
 
 export async function GET(
   req: Request,
@@ -22,7 +23,42 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(order);
+    let mercadoPagoUrl: string | null = null;
+    if (order.paymentStatus === "PENDING" && order.items.length > 0) {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://177.7.60.189:3002";
+        const pref = await createMercadoPagoPreference({
+          orderId: order.id,
+          items: order.items.map((v) => ({
+            id: v.productId || v.id,
+            title: `${v.productName} (${v.size}/${v.color})`,
+            unitPrice: v.price,
+            quantity: v.quantity,
+            pictureUrl: v.imageUrl,
+          })),
+          payer: {
+            name: order.customerName,
+            email: order.customerEmail,
+          },
+          shippingPrice: order.shippingPrice,
+          backUrls: {
+            success: `${baseUrl}/order-confirmed/${order.id}`,
+            failure: `${baseUrl}/checkout`,
+            pending: `${baseUrl}/order-confirmed/${order.id}`,
+          },
+        });
+        if (pref.success) {
+          mercadoPagoUrl = pref.sandboxInitPoint || pref.initPoint || null;
+        }
+      } catch (err) {
+        console.warn("Could not generate Mercado Pago URL on get order:", err);
+      }
+    }
+
+    return NextResponse.json({
+      ...order,
+      mercadoPagoUrl,
+    });
   } catch (error) {
     console.error("Error fetching order:", error);
     return NextResponse.json(
@@ -62,7 +98,7 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("Error updating order status:", error);
+    console.error("Error updating order:", error);
     return NextResponse.json(
       { error: "Erro ao atualizar status do pedido" },
       { status: 500 }

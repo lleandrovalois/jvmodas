@@ -131,7 +131,6 @@ export async function createMercadoPagoPreference({
           email: payer.email,
         },
         back_urls: backUrls,
-        auto_return: "approved",
       },
     });
 
