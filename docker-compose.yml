@@ -1,0 +1,26 @@
+services:
+  jvmodas:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jvmodas-fitness
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    volumes:
+      - jvmodas_data:/app/data
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - DATABASE_URL=file:/app/data/jvmodas.db
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - ADMIN_SECRET=${ADMIN_SECRET:-jvmodas_super_secret_jwt_key_2026_xyz}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://177.7.60.189:3002}
+
+volumes:
+  jvmodas_data:
+    driver: local

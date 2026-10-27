@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.agents
+.claude
+.windsurf
+*.db
+*.db-journal
+npm-debug.log*
+.DS_Store
